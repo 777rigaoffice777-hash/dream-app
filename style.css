@@ -141,7 +141,7 @@ main { position: relative; }
 
 #morozBtn {
   position: absolute; left: 50%; bottom: 3%; z-index: 2;
-  height: 60%; aspect-ratio: 300 / 440; transform: translateX(-50%);
+  height: 65%; aspect-ratio: 300 / 440; transform: translateX(-50%);
   background: none; padding: 0; border-radius: 0;
   -webkit-tap-highlight-color: transparent;
 }
