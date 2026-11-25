@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1440">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Мастерская</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>✨ Мастерская</h1>
+    <button id="installBtn" hidden>Установить</button>
+  </header>
+
+  <main>
+    <!-- Экран 1: Идеи -->
+    <section id="ideas" class="screen active">
+      <h2>Мои идеи</h2>
+      <form id="ideaForm">
+        <input id="ideaInput" placeholder="Придумал что-то? Запиши!" autocomplete="off">
+        <button>+</button>
+      </form>
+      <ul id="ideaList"></ul>
+    </section>
+
+    <!-- Экран 2: Рисовалка -->
+    <section id="draw" class="screen">
+      <h2>Рисовалка</h2>
+      <div class="palette" id="palette"></div>
+      <canvas id="canvas"></canvas>
+      <div class="row">
+        <button id="clearBtn">Очистить</button>
+        <button id="saveBtn">Сохранить картинку</button>
+      </div>
+    </section>
+
+    <!-- Экран 3: Сюда добавляй своё -->
+    <section id="lab" class="screen">
+      <h2>Лаборатория</h2>
+      <p>Это пустая комната для твоих экспериментов. Открой <code>index.html</code> и <code>app.js</code> и добавь сюда что угодно: игру, калькулятор, музыку…</p>
+      <button id="magicBtn" class="big">Нажми меня</button>
+      <p id="magicOut"></p>
+    </section>
+  </main>
+
+  <nav>
+    <button data-screen="ideas" class="active">💡<span>Идеи</span></button>
+    <button data-screen="draw">🎨<span>Рисовать</span></button>
+    <button data-screen="lab">🧪<span>Лаборатория</span></button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
