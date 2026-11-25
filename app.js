@@ -15,11 +15,25 @@ document.querySelectorAll('nav button').forEach(btn => {
 const dotsArea = document.getElementById('dots');
 const dotCounter = document.getElementById('dotCounter');
 let hits = 0;
-const DOT_EVERY_MS = 700;   // как часто появляется новая точка
-const DOT_LIFE_MS = 1500;   // сколько живёт точка
+
+// Скорость от x1 до x10. Чем больше — тем чаще появляются точки и тем быстрее исчезают.
+let speed = Number(localStorage.getItem('dotSpeed')) || 1;
+const dotEveryMs = () => 1100 - (speed - 1) * 100;  // x1 = 1100 мс, x10 = 200 мс
+const dotLifeMs  = () => 2200 - (speed - 1) * 190;  // x1 = 2200 мс, x10 = 490 мс
+
+const speedLabel = document.getElementById('speedLabel');
+function setSpeed(s) {
+  speed = Math.min(10, Math.max(1, s));
+  speedLabel.textContent = 'x' + speed;
+  localStorage.setItem('dotSpeed', speed);
+}
+document.getElementById('speedDown').onclick = () => setSpeed(speed - 1);
+document.getElementById('speedUp').onclick = () => setSpeed(speed + 1);
+setSpeed(speed);
 
 function spawnDot() {
   if (!dotsArea.classList.contains('active') || document.hidden) return;
+  const DOT_LIFE_MS = dotLifeMs();
   const w = dotsArea.clientWidth, h = dotsArea.clientHeight;
   const dot = document.createElement('button');
   dot.className = 'dot';
@@ -37,7 +51,7 @@ function spawnDot() {
   dotsArea.appendChild(dot);
   setTimeout(() => dot.remove(), DOT_LIFE_MS);
 }
-setInterval(spawnDot, DOT_EVERY_MS);
+(function loop() { spawnDot(); setTimeout(loop, dotEveryMs()); })();
 
 document.getElementById('dotReset').onclick = () => { hits = 0; dotCounter.textContent = 0; };
 

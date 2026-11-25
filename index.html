@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <header>
@@ -22,6 +22,11 @@
     <!-- Режим 1: Точки -->
     <section id="dots" class="screen active">
       <div id="dotCounter">0</div>
+      <div id="speedBox">
+        <button id="speedDown">−</button>
+        <span id="speedLabel">x1</span>
+        <button id="speedUp">+</button>
+      </div>
       <button id="dotReset">↺</button>
     </section>
 
@@ -62,6 +67,6 @@
     <button data-screen="lab">🧪<span>Лаборатория</span></button>
   </nav>
 
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

@@ -79,6 +79,13 @@ main { position: relative; }
   position: absolute; top: 10px; right: 10px; z-index: 2;
   background: rgba(255,255,255,.85); padding: 6px 12px; font-size: 1.2rem;
 }
+#speedBox {
+  position: absolute; top: 10px; left: 10px; z-index: 2;
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.85); border-radius: 12px; padding: 4px;
+}
+#speedBox button { padding: 4px 14px; font-size: 1.2rem; }
+#speedLabel { min-width: 2.6em; text-align: center; font-weight: 800; color: #1b1440; }
 .dot {
   position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px;
   border-radius: 50%; padding: 0;
