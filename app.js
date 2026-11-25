@@ -148,6 +148,110 @@ setInterval(() => {
   else if (target && now - targetSince >= TARGET_EVERY_MS) newTarget();
 }, 200);
 
+// ===== Режим 3: Дед Мороз =====
+// Нажимаешь на Деда Мороза — он подпрыгивает и говорит пожелание.
+const GREETINGS = [
+  'Хо-хо-хо! С Новым годом!',
+  'Хо-хо-хо! С Новым годом, Ваня!',
+  'Хо-хо-хо! С праздником!',
+  'Хо-хо-хо! Счастливого Нового года!',
+];
+const WISHES = [
+  'Желаю, чтобы вся твоя семья была здоровой!',
+  'Желаю, чтобы оценки были только хорошие!',
+  'Желаю, чтобы подарки были самые крутые!',
+  'Желаю, чтобы все твои желания исполнялись!',
+  'Желаю, чтобы ты в конце концов встретил свою любовь!',
+  'Желаю, чтобы мама и папа тобой гордились!',
+  'Желаю, чтобы рядом всегда были верные друзья!',
+  'Желаю, чтобы каждый день был весёлым!',
+  'Желаю, чтобы ты рос сильным и смелым!',
+  'Желаю, чтобы все твои идеи получались!',
+  'Желаю, чтобы в новом году было много приключений!',
+  'Желаю, чтобы ты никогда не болел!',
+  'Желаю, чтобы учёба давалась легко!',
+  'Желаю, чтобы твоё приложение стало самым лучшим!',
+  'Желаю, чтобы дома всегда было тепло и уютно!',
+  'Желаю, чтобы у тебя всё получалось с первого раза!',
+  'Желаю, чтобы каникулы были длинными и снежными!',
+  'Желаю, чтобы ты всегда улыбался!',
+  'Желаю, чтобы рядом были люди, которые тебя любят!',
+  'Желаю, чтобы ты стал тем, кем мечтаешь!',
+  'Желаю, чтобы бабушки и дедушки были здоровы!',
+  'Желаю, чтобы в этом году сбылась твоя главная мечта!',
+];
+
+const morozBtn = document.getElementById('morozBtn');
+const morozSvg = document.getElementById('morozSvg');
+const morozBubble = document.getElementById('morozBubble');
+const morozArea = document.getElementById('moroz');
+
+// «Мешок» пожеланий: перемешиваем и достаём по одному, пока не кончатся — без повторов
+let wishBag = [];
+function nextWish() {
+  if (!wishBag.length) wishBag = [...WISHES].sort(() => Math.random() - 0.5);
+  return wishBag.pop();
+}
+
+let talkTimer;
+function morozSay(text) {
+  clearTimeout(talkTimer);
+  morozSvg.classList.add('talking');
+  const stop = () => morozSvg.classList.remove('talking');
+  talkTimer = setTimeout(stop, text.length * 75); // запасной вариант, если голоса нет
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ru-RU';
+  u.pitch = 0.6;   // низкий голос, как у Деда Мороза
+  u.rate = 0.9;
+  u.onend = () => { clearTimeout(talkTimer); stop(); };
+  speechSynthesis.speak(u);
+}
+
+function sparkles(x, y) {
+  const icons = ['✨', '⭐', '❄️', '🎁', '🎄'];
+  for (let i = 0; i < 12; i++) {
+    const s = document.createElement('span');
+    s.className = 'spark';
+    s.textContent = icons[i % icons.length];
+    const angle = Math.random() * Math.PI * 2, dist = 70 + Math.random() * 90;
+    s.style.left = x + 'px'; s.style.top = y + 'px';
+    s.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    s.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    morozArea.appendChild(s);
+    setTimeout(() => s.remove(), 900);
+  }
+}
+
+morozBtn.addEventListener('click', e => {
+  const greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+  const wish = nextWish();
+  morozBubble.innerHTML = `<span class="hoho">${greeting}</span>${wish}`;
+  morozBubble.classList.remove('pop'); void morozBubble.offsetWidth; morozBubble.classList.add('pop');
+  morozBtn.classList.remove('jump'); void morozBtn.offsetWidth; morozBtn.classList.add('jump');
+  const r = morozArea.getBoundingClientRect();
+  sparkles((e.clientX || r.width / 2) - r.left, (e.clientY || r.height / 2) - r.top);
+  if (navigator.vibrate) navigator.vibrate(30);
+  morozSay(greeting + ' ' + wish);
+});
+
+// Снег
+(function makeSnow() {
+  const snow = document.getElementById('snow');
+  for (let i = 0; i < 40; i++) {
+    const f = document.createElement('span');
+    f.className = 'flake';
+    f.textContent = Math.random() < 0.5 ? '❄' : '•';
+    f.style.left = Math.random() * 100 + '%';
+    f.style.fontSize = (8 + Math.random() * 14) + 'px';
+    f.style.animationDuration = (6 + Math.random() * 8) + 's';
+    f.style.animationDelay = (-Math.random() * 14) + 's';
+    f.style.setProperty('--drift', (Math.random() * 60 - 30) + 'px');
+    snow.appendChild(f);
+  }
+})();
+
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');
 let ideas = JSON.parse(localStorage.getItem('ideas') || '[]');

@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <header>
@@ -41,6 +41,83 @@
         <button class="speedUp">+</button>
       </div>
       <button class="reset">↺</button>
+    </section>
+
+    <!-- Режим 3: Дед Мороз -->
+    <section id="moroz" class="screen">
+      <div id="snow"></div>
+      <div class="ground"></div>
+      <div id="morozBubble">Нажми на Деда Мороза! 🎄</div>
+      <button id="morozBtn" aria-label="Дед Мороз">
+        <svg id="morozSvg" viewBox="0 0 300 440">
+          <defs>
+            <linearGradient id="coat" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#e53935"/><stop offset="1" stop-color="#9a1b1b"/>
+            </linearGradient>
+            <radialGradient id="glow">
+              <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>
+              <stop offset="1" stop-color="#9be7ff" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <!-- посох -->
+          <rect x="243" y="105" width="8" height="325" rx="4" fill="#cfd8dc"/>
+          <circle id="staffGlow" cx="247" cy="95" r="30" fill="url(#glow)"/>
+          <path d="M247 73 L252 90 L269 95 L252 100 L247 117 L242 100 L225 95 L242 90 Z" fill="#fff"/>
+          <!-- шуба -->
+          <path d="M100 185 Q150 172 200 185 L235 410 Q150 425 65 410 Z" fill="url(#coat)"/>
+          <rect x="138" y="192" width="24" height="222" fill="#fff"/>
+          <path d="M60 403 Q150 420 240 403 L243 428 Q150 446 57 428 Z" fill="#fff"/>
+          <rect x="88" y="295" width="124" height="13" rx="6.5" fill="#ffd54f"/>
+          <circle cx="150" cy="301.5" r="9" fill="#ffca28" stroke="#f9a825" stroke-width="2"/>
+          <!-- снежинки на шубе -->
+          <g fill="#fff" opacity=".75">
+            <circle cx="105" cy="350" r="3"/><circle cx="195" cy="360" r="3"/>
+            <circle cx="115" cy="250" r="2.5"/><circle cx="188" cy="245" r="2.5"/>
+            <circle cx="95" cy="385" r="2"/><circle cx="208" cy="390" r="2"/>
+          </g>
+          <!-- левая рука -->
+          <path d="M104 195 Q60 230 68 300 L96 300 Q93 248 120 216 Z" fill="url(#coat)"/>
+          <rect x="62" y="292" width="40" height="14" rx="7" fill="#fff"/>
+          <circle cx="81" cy="319" r="15" fill="#c62828"/>
+          <!-- правая рука держит посох -->
+          <path d="M196 195 Q240 203 247 246 L222 254 Q214 226 184 218 Z" fill="url(#coat)"/>
+          <rect x="220" y="240" width="30" height="13" rx="6.5" fill="#fff"/>
+          <circle cx="247" cy="265" r="15" fill="#c62828"/>
+          <!-- воротник -->
+          <ellipse cx="150" cy="188" rx="60" ry="14" fill="#fff"/>
+          <!-- волосы по бокам -->
+          <ellipse cx="109" cy="146" rx="11" ry="18" fill="#fff"/>
+          <ellipse cx="191" cy="146" rx="11" ry="18" fill="#fff"/>
+          <!-- лицо -->
+          <circle cx="150" cy="140" r="40" fill="#f8cfae"/>
+          <circle cx="126" cy="150" r="8" fill="#ff8a80" opacity=".6"/>
+          <circle cx="174" cy="150" r="8" fill="#ff8a80" opacity=".6"/>
+          <!-- глаза-улыбки -->
+          <g id="eyes" fill="none" stroke="#3b2b2b" stroke-width="3.5" stroke-linecap="round">
+            <path d="M129 134 Q136 127 143 134"/><path d="M157 134 Q164 127 171 134"/>
+          </g>
+          <!-- брови -->
+          <g fill="#fff">
+            <ellipse cx="135" cy="122" rx="11" ry="4.5"/><ellipse cx="165" cy="122" rx="11" ry="4.5"/>
+          </g>
+          <!-- рот -->
+          <ellipse id="mouth" cx="150" cy="171" rx="9" ry="7" fill="#7a1f1f"/>
+          <!-- борода -->
+          <path d="M108 152 Q104 188 118 216 Q128 246 150 278 Q172 246 182 216 Q196 188 192 152
+                   Q186 176 170 174 Q160 184 150 178 Q140 184 130 174 Q114 176 108 152 Z" fill="#fff"/>
+          <path d="M150 200 Q147 225 150 255 M132 205 Q130 222 136 240 M168 205 Q170 222 164 240"
+                stroke="#e3eaf2" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <!-- усы -->
+          <ellipse cx="137" cy="162" rx="15" ry="7" fill="#fff" transform="rotate(-12 137 162)"/>
+          <ellipse cx="163" cy="162" rx="15" ry="7" fill="#fff" transform="rotate(12 163 162)"/>
+          <!-- нос -->
+          <circle cx="150" cy="150" r="8.5" fill="#f2a08c"/>
+          <!-- шапка -->
+          <path d="M106 124 Q106 68 150 64 Q194 68 194 124 Z" fill="url(#coat)"/>
+          <rect x="101" y="111" width="98" height="23" rx="11.5" fill="#fff"/>
+          <path d="M150 78 L153 87 L162 90 L153 93 L150 102 L147 93 L138 90 L147 87 Z" fill="#fff"/>
+        </svg>
+      </button>
     </section>
 
     <!-- Экран: Идеи -->
@@ -76,11 +153,12 @@
   <nav>
     <button data-screen="dots" class="active">🔴<span>Точки</span></button>
     <button data-screen="colors">🌈<span>Цвета</span></button>
+    <button data-screen="moroz">🎅<span>Мороз</span></button>
     <button data-screen="ideas">💡<span>Идеи</span></button>
     <button data-screen="draw">🎨<span>Рисовать</span></button>
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
