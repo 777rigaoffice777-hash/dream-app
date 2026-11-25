@@ -11,7 +11,7 @@ if [ "$1" = "pull" ]; then
 fi
 
 if [ -n "$(git status --porcelain)" ]; then
-  git add -A
+  git add -A 2>/dev/null
   git commit -q -m "Автосохранение $(date '+%Y-%m-%d %H:%M')" >/dev/null 2>&1
 fi
 
