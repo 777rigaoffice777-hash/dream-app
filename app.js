@@ -6,54 +6,147 @@ document.querySelectorAll('nav button').forEach(btn => {
     btn.classList.add('active');
     document.getElementById(btn.dataset.screen).classList.add('active');
     if (btn.dataset.screen === 'draw') resizeCanvas();
+    if (btn.dataset.screen === 'colors') startColorsRound();
+    else if ('speechSynthesis' in window) speechSynthesis.cancel();
   });
 });
 
-// ===== Режим 1: Точки =====
-// Красные точки появляются в случайных местах и через время пропадают.
-// Нажал на точку — счётчик +1.
-const dotsArea = document.getElementById('dots');
-const dotCounter = document.getElementById('dotCounter');
-let hits = 0;
+// ===== Игровой движок для режимов «Точки» и «Цвета» =====
+// Точки появляются в случайных местах и через время пропадают.
 
-// Скорость от x1 до x10. Чем больше — тем чаще появляются точки и тем быстрее исчезают.
+// Скорость от x1 до x10 (общая для обоих режимов).
+// Чем больше — тем чаще появляются точки и тем быстрее исчезают.
 let speed = Number(localStorage.getItem('dotSpeed')) || 1;
 const dotEveryMs = () => 1100 - (speed - 1) * 100;  // x1 = 1100 мс, x10 = 200 мс
 const dotLifeMs  = () => 2200 - (speed - 1) * 190;  // x1 = 2200 мс, x10 = 490 мс
 
-const speedLabel = document.getElementById('speedLabel');
 function setSpeed(s) {
   speed = Math.min(10, Math.max(1, s));
-  speedLabel.textContent = 'x' + speed;
+  document.querySelectorAll('.speedLabel').forEach(l => l.textContent = 'x' + speed);
   localStorage.setItem('dotSpeed', speed);
 }
-document.getElementById('speedDown').onclick = () => setSpeed(speed - 1);
-document.getElementById('speedUp').onclick = () => setSpeed(speed + 1);
+document.querySelectorAll('.speedDown').forEach(b => b.onclick = () => setSpeed(speed - 1));
+document.querySelectorAll('.speedUp').forEach(b => b.onclick = () => setSpeed(speed + 1));
 setSpeed(speed);
 
-function spawnDot() {
-  if (!dotsArea.classList.contains('active') || document.hidden) return;
-  const DOT_LIFE_MS = dotLifeMs();
-  const w = dotsArea.clientWidth, h = dotsArea.clientHeight;
-  const dot = document.createElement('button');
-  dot.className = 'dot';
-  dot.style.left = (30 + Math.random() * (w - 60)) + 'px';
-  dot.style.top = (30 + Math.random() * (h - 60)) + 'px';
-  dot.style.setProperty('--life', DOT_LIFE_MS + 'ms');
-  dot.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    hits++;
-    dotCounter.textContent = hits;
-    dot.classList.add('hit');
-    if (navigator.vibrate) navigator.vibrate(20);
-    setTimeout(() => dot.remove(), 200);
-  });
-  dotsArea.appendChild(dot);
-  setTimeout(() => dot.remove(), DOT_LIFE_MS);
-}
-(function loop() { spawnDot(); setTimeout(loop, dotEveryMs()); })();
+// Создаёт игру на экране с id. pickColor() — какого цвета новая точка,
+// onTap(color) — что делать при нажатии (вернуть true, если засчитать).
+function makeGame(id, { pickColor, onTap }) {
+  const area = document.getElementById(id);
+  const counter = area.querySelector('.counter');
+  const game = { area, hits: 0 };
 
-document.getElementById('dotReset').onclick = () => { hits = 0; dotCounter.textContent = 0; };
+  game.spawn = () => {
+    const life = dotLifeMs();
+    const color = pickColor();
+    const w = area.clientWidth, h = area.clientHeight;
+    const dot = document.createElement('button');
+    dot.className = 'dot';
+    dot.style.left = (30 + Math.random() * (w - 60)) + 'px';
+    dot.style.top = (130 + Math.random() * (h - 160)) + 'px'; // не залезать под кнопки сверху
+    dot.style.setProperty('--life', life + 'ms');
+    dot.style.setProperty('--c', color.css);
+    dot.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      dot.classList.add('hit');
+      setTimeout(() => dot.remove(), 200);
+      if (onTap(color)) {
+        game.hits++;
+        counter.textContent = game.hits;
+        if (navigator.vibrate) navigator.vibrate(20);
+      }
+    });
+    area.appendChild(dot);
+    setTimeout(() => dot.remove(), life);
+  };
+
+  game.reset = () => { game.hits = 0; counter.textContent = 0; };
+  area.querySelector('.reset').onclick = () => game.reset();
+  return game;
+}
+
+// ===== Режим 1: Точки — только красные, любое нажатие +1 =====
+const RED = { name: 'красный', css: '#ff1a1a' };
+const dotsGame = makeGame('dots', { pickColor: () => RED, onTap: () => true });
+
+// ===== Режим 2: Реакция по цветам =====
+// Сначала точки просто сыплются. Через 3 секунды игра говорит: «Только чёрный!»
+// Нажимать можно только этот цвет. Каждые 10 секунд цвет меняется.
+const COLORS = [
+  { name: 'жёлтый',  css: '#ffd60a', text: '#1b1440' },
+  { name: 'розовый', css: '#ff6fb5', text: '#1b1440' },
+  { name: 'зелёный', css: '#2ecc40', text: '#fff' },
+  { name: 'красный', css: '#ff1a1a', text: '#fff' },
+  { name: 'чёрный',  css: '#111111', text: '#fff' },
+  { name: 'синий',   css: '#1e5bff', text: '#fff' },
+];
+const FIRST_TARGET_MS = 3000;   // через сколько появится первое задание
+const TARGET_EVERY_MS = 10000;  // как часто меняется цвет
+const TARGET_SHARE = 0.35;      // какая часть точек — нужного цвета
+
+let target = null, roundStart = 0, targetSince = 0, mistakes = 0;
+const colorsArea = document.getElementById('colors');
+const targetBox = colorsArea.querySelector('.target');
+const mistakesBox = colorsArea.querySelector('.mistakes');
+const randomColor = list => list[Math.floor(Math.random() * list.length)];
+
+const colorsGame = makeGame('colors', {
+  pickColor: () => {
+    if (target && Math.random() < TARGET_SHARE) return target;
+    return randomColor(COLORS.filter(c => c !== target));
+  },
+  onTap: color => {
+    if (!target) return false;            // задания ещё нет — просто лопаем
+    if (color === target) return true;
+    mistakes++;                           // не тот цвет!
+    mistakesBox.textContent = 'Ошибки: ' + mistakes;
+    colorsArea.classList.remove('flash-bad'); void colorsArea.offsetWidth;
+    colorsArea.classList.add('flash-bad');
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+    return false;
+  },
+});
+
+function say(text) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ru-RU';
+  speechSynthesis.speak(u);
+}
+
+function newTarget() {
+  target = randomColor(COLORS.filter(c => c !== target));
+  targetSince = Date.now();
+  targetBox.innerHTML = `Только <b style="background:${target.css};color:${target.text}">${target.name.toUpperCase()}</b>`;
+  targetBox.classList.remove('new'); void targetBox.offsetWidth;
+  targetBox.classList.add('new');
+  say('Только ' + target.name);
+}
+
+function startColorsRound() {
+  target = null; roundStart = Date.now(); mistakes = 0;
+  targetBox.textContent = 'Приготовься…';
+  mistakesBox.textContent = 'Ошибки: 0';
+  colorsGame.reset();
+}
+colorsArea.querySelector('.reset').onclick = startColorsRound;
+
+// ===== Главный цикл: точки появляются только на открытом экране =====
+(function loop() {
+  if (!document.hidden) {
+    if (dotsGame.area.classList.contains('active')) dotsGame.spawn();
+    if (colorsArea.classList.contains('active')) colorsGame.spawn();
+  }
+  setTimeout(loop, dotEveryMs());
+})();
+
+setInterval(() => {
+  if (!colorsArea.classList.contains('active') || document.hidden) return;
+  const now = Date.now();
+  if (!target && now - roundStart >= FIRST_TARGET_MS) newTarget();
+  else if (target && now - targetSince >= TARGET_EVERY_MS) newTarget();
+}, 200);
 
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');

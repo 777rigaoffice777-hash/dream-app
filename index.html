@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <header>
@@ -20,14 +20,27 @@
 
   <main>
     <!-- Режим 1: Точки -->
-    <section id="dots" class="screen active">
-      <div id="dotCounter">0</div>
-      <div id="speedBox">
-        <button id="speedDown">−</button>
-        <span id="speedLabel">x1</span>
-        <button id="speedUp">+</button>
+    <section id="dots" class="screen game active">
+      <div class="counter">0</div>
+      <div class="speedBox">
+        <button class="speedDown">−</button>
+        <span class="speedLabel">x1</span>
+        <button class="speedUp">+</button>
       </div>
-      <button id="dotReset">↺</button>
+      <button class="reset">↺</button>
+    </section>
+
+    <!-- Режим 2: Реакция по цветам -->
+    <section id="colors" class="screen game">
+      <div class="target">Приготовься…</div>
+      <div class="counter">0</div>
+      <div class="mistakes">Ошибки: 0</div>
+      <div class="speedBox">
+        <button class="speedDown">−</button>
+        <span class="speedLabel">x1</span>
+        <button class="speedUp">+</button>
+      </div>
+      <button class="reset">↺</button>
     </section>
 
     <!-- Экран: Идеи -->
@@ -62,11 +75,12 @@
 
   <nav>
     <button data-screen="dots" class="active">🔴<span>Точки</span></button>
+    <button data-screen="colors">🌈<span>Цвета</span></button>
     <button data-screen="ideas">💡<span>Идеи</span></button>
     <button data-screen="draw">🎨<span>Рисовать</span></button>
-    <button data-screen="lab">🧪<span>Лаборатория</span></button>
+    <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

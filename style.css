@@ -60,36 +60,53 @@ nav button {
   flex: 1; background: transparent; color: var(--text); border-radius: 0;
   display: flex; flex-direction: column; align-items: center; font-size: 1.3rem; padding: 10px 0;
 }
-nav button span { font-size: .75rem; font-weight: 500; opacity: .7; }
+nav button span { font-size: .65rem; font-weight: 500; opacity: .7; white-space: nowrap; }
 nav button.active span { opacity: 1; color: var(--accent); }
-/* ===== Режим «Точки» ===== */
+/* ===== Игровые режимы: «Точки» и «Цвета» ===== */
 main { position: relative; }
-#dots.active {
+.game.active {
   position: absolute; inset: 0; overflow: hidden;
   background: #8a8a8a;
   touch-action: manipulation; user-select: none; -webkit-user-select: none;
 }
-#dotCounter {
+.game .counter {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
   font-size: 6rem; font-weight: 800; color: #fff;
   text-shadow: 0 4px 16px rgba(0,0,0,.35);
   pointer-events: none;
 }
-#dotReset {
+.game .mistakes {
+  position: absolute; top: calc(50% + 4.5rem); left: 0; right: 0; text-align: center;
+  font-size: 1rem; font-weight: 700; color: #fff; opacity: .85; pointer-events: none;
+}
+.game .reset {
   position: absolute; top: 10px; right: 10px; z-index: 2;
   background: rgba(255,255,255,.85); padding: 6px 12px; font-size: 1.2rem;
 }
-#speedBox {
+.speedBox {
   position: absolute; top: 10px; left: 10px; z-index: 2;
   display: flex; align-items: center; gap: 6px;
   background: rgba(255,255,255,.85); border-radius: 12px; padding: 4px;
 }
-#speedBox button { padding: 4px 14px; font-size: 1.2rem; }
-#speedLabel { min-width: 2.6em; text-align: center; font-weight: 800; color: #1b1440; }
+.speedBox button { padding: 4px 14px; font-size: 1.2rem; }
+.speedLabel { min-width: 2.6em; text-align: center; font-weight: 800; color: #1b1440; }
+/* Задание: «Только красный!» */
+.game .target {
+  position: absolute; top: 70px; left: 10px; right: 10px; z-index: 2;
+  text-align: center; font-size: 1.3rem; font-weight: 800;
+  padding: 8px 12px; border-radius: 14px;
+  background: rgba(255,255,255,.92); color: #1b1440;
+  pointer-events: none;
+}
+.game .target b { padding: 0 10px; border-radius: 8px; }
+.game .target.new { animation: targetPulse .6s ease; }
+@keyframes targetPulse { 40% { transform: scale(1.12); } }
+.game.flash-bad { animation: flashBad .3s ease; }
+@keyframes flashBad { 50% { background: #a84a4a; } }
 .dot {
   position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px;
   border-radius: 50%; padding: 0;
-  background: #ff1a1a; box-shadow: 0 0 14px rgba(255,26,26,.8);
+  background: var(--c, #ff1a1a); box-shadow: 0 0 14px var(--c, #ff1a1a);
   animation: dotLife var(--life) linear forwards;
 }
 .dot.hit { animation: dotPop .2s ease-out forwards; pointer-events: none; }
