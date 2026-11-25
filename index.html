@@ -19,8 +19,14 @@
   </header>
 
   <main>
-    <!-- Экран 1: Идеи -->
-    <section id="ideas" class="screen active">
+    <!-- Режим 1: Точки -->
+    <section id="dots" class="screen active">
+      <div id="dotCounter">0</div>
+      <button id="dotReset">↺</button>
+    </section>
+
+    <!-- Экран: Идеи -->
+    <section id="ideas" class="screen">
       <h2>Мои идеи</h2>
       <form id="ideaForm">
         <input id="ideaInput" placeholder="Придумал что-то? Запиши!" autocomplete="off">
@@ -50,7 +56,8 @@
   </main>
 
   <nav>
-    <button data-screen="ideas" class="active">💡<span>Идеи</span></button>
+    <button data-screen="dots" class="active">🔴<span>Точки</span></button>
+    <button data-screen="ideas">💡<span>Идеи</span></button>
     <button data-screen="draw">🎨<span>Рисовать</span></button>
     <button data-screen="lab">🧪<span>Лаборатория</span></button>
   </nav>

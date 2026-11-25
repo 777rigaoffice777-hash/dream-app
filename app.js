@@ -9,6 +9,38 @@ document.querySelectorAll('nav button').forEach(btn => {
   });
 });
 
+// ===== Режим 1: Точки =====
+// Красные точки появляются в случайных местах и через время пропадают.
+// Нажал на точку — счётчик +1.
+const dotsArea = document.getElementById('dots');
+const dotCounter = document.getElementById('dotCounter');
+let hits = 0;
+const DOT_EVERY_MS = 700;   // как часто появляется новая точка
+const DOT_LIFE_MS = 1500;   // сколько живёт точка
+
+function spawnDot() {
+  if (!dotsArea.classList.contains('active') || document.hidden) return;
+  const w = dotsArea.clientWidth, h = dotsArea.clientHeight;
+  const dot = document.createElement('button');
+  dot.className = 'dot';
+  dot.style.left = (30 + Math.random() * (w - 60)) + 'px';
+  dot.style.top = (30 + Math.random() * (h - 60)) + 'px';
+  dot.style.setProperty('--life', DOT_LIFE_MS + 'ms');
+  dot.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    hits++;
+    dotCounter.textContent = hits;
+    dot.classList.add('hit');
+    if (navigator.vibrate) navigator.vibrate(20);
+    setTimeout(() => dot.remove(), 200);
+  });
+  dotsArea.appendChild(dot);
+  setTimeout(() => dot.remove(), DOT_LIFE_MS);
+}
+setInterval(spawnDot, DOT_EVERY_MS);
+
+document.getElementById('dotReset').onclick = () => { hits = 0; dotCounter.textContent = 0; };
+
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');
 let ideas = JSON.parse(localStorage.getItem('ideas') || '[]');
