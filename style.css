@@ -125,7 +125,7 @@ main { position: relative; }
   border-radius: 50% 50% 0 0;
 }
 #morozBubble {
-  position: absolute; top: 14px; left: 14px; right: 14px; z-index: 3;
+  position: absolute; top: 14px; left: 14px; right: 14px; z-index: 6;
   background: #fff; color: #1b1440; border-radius: 22px;
   padding: 14px 16px; text-align: center; font-size: 1rem; font-weight: 700; line-height: 1.3;
   box-shadow: 0 8px 24px rgba(0,0,0,.35);
