@@ -27,6 +27,22 @@
    ```
    Через ~1 минуту изменения появятся по той же ссылке. Иногда нужно закрыть и снова открыть приложение.
 
+## Автосохранение
+Когда работаешь через Claude Code, всё сохраняется в GitHub само после каждого ответа Claude,
+а при запуске подтягивается свежая версия. Вручную сохранить: `bash autosave.sh`.
+
+## Как продолжить на другом компьютере
+1. Установи [Git](https://git-scm.com), [GitHub CLI](https://cli.github.com) и VS Code с Claude Code.
+2. В терминале:
+   ```
+   gh auth login
+   gh repo clone 777rigaoffice777-hash/dream-app
+   cd dream-app
+   git config user.name "Ваня"
+   git config user.email "777rigaoffice777-hash@users.noreply.github.com"
+   ```
+3. Открой папку `dream-app` в VS Code — и продолжай. Автосохранение включится само.
+
 ## Идеи, с чего начать
 - Поменяй цвета в начале `style.css` (`--bg`, `--accent`).
 - Добавь свои фразы в `phrases` в `app.js`.
