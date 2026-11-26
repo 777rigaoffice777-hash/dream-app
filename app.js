@@ -252,16 +252,17 @@ morozBtn.addEventListener('click', e => {
   }
 })();
 
-// ===== Режим 4: Головоломки (лёгкий уровень) =====
-// Каждая головоломка — это { title, task, render(board, win) }.
+// ===== Режим 4: Головоломки (лёгкие и средние) =====
+// Каждая головоломка — это { level, title, task, render(board, win) }.
 // render рисует головоломку в board и вызывает win(), когда она решена.
 // Хочешь добавить свою — допиши ещё один объект в PUZZLES.
 const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
 
+// Выбор одного правильного ответа из нескольких
 function choicePuzzle(board, options, correct, win) {
   shuffle(options).forEach(opt => {
     const b = document.createElement('button');
-    b.className = 'pzItem' + (opt.length > 2 ? ' text' : '');
+    b.className = 'pzItem' + (String(opt).length > 2 ? ' text' : '');
     b.textContent = opt;
     b.onclick = () => {
       if (opt === correct) { b.classList.add('good'); win(); }
@@ -271,14 +272,78 @@ function choicePuzzle(board, options, correct, win) {
   });
 }
 
+// Пятнашки 3×3. moves — сколько ходов перемешивать (больше = сложнее)
+function slidingPuzzle(board, win, moves) {
+  const grid = document.createElement('div');
+  grid.className = 'pz15';
+  board.appendChild(grid);
+  const GOAL = '1,2,3,4,5,6,7,8,0';
+  let tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0]; // 0 — пустое место
+  const neighbors = i => [i - 3, i + 3, i % 3 ? i - 1 : -1, i % 3 < 2 ? i + 1 : -1].filter(n => n >= 0 && n < 9);
+  let prev = -1;
+  for (let k = 0; k < moves || tiles.join() === GOAL; k++) {
+    const e = tiles.indexOf(0);
+    const opts = neighbors(e).filter(n => n !== prev);
+    const n = opts[Math.floor(Math.random() * opts.length)];
+    [tiles[e], tiles[n]] = [tiles[n], tiles[e]];
+    prev = e;
+  }
+  const draw = () => {
+    grid.innerHTML = '';
+    tiles.forEach((t, i) => {
+      const b = document.createElement('button');
+      b.textContent = t || '';
+      if (!t) b.className = 'empty';
+      b.onclick = () => {
+        const e = tiles.indexOf(0);
+        if (!neighbors(e).includes(i) || grid.dataset.done) return;
+        [tiles[e], tiles[i]] = [tiles[i], tiles[e]];
+        draw();
+        if (tiles.join() === GOAL) { grid.dataset.done = 1; win(); }
+      };
+      grid.appendChild(b);
+    });
+  };
+  draw();
+}
+
+// Найди пары. emojis — по одной картинке на пару, cols — сколько столбиков
+function memoryPuzzle(board, win, emojis, cols) {
+  const grid = document.createElement('div');
+  grid.className = 'pzMemory';
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  board.appendChild(grid);
+  let open = [], found = 0, busy = false;
+  shuffle([...emojis, ...emojis]).forEach(emoji => {
+    const b = document.createElement('button');
+    b.textContent = emoji;
+    b.onclick = () => {
+      if (busy || b.classList.contains('open') || b.classList.contains('matched')) return;
+      b.classList.add('open');
+      open.push(b);
+      if (open.length < 2) return;
+      const [a, c] = open; open = [];
+      if (a.textContent === c.textContent) {
+        a.classList.replace('open', 'matched'); c.classList.replace('open', 'matched');
+        if (++found === emojis.length) win();
+      } else {
+        busy = true;
+        setTimeout(() => { a.classList.remove('open'); c.classList.remove('open'); busy = false; }, 800);
+      }
+    };
+    grid.appendChild(b);
+  });
+}
+
 const PUZZLES = [
+  // ---------- Лёгкие ----------
   {
-    title: '1. Найди лишнее',
+    level: 'easy', title: 'Найди лишнее',
     task: 'Что здесь не фрукт? Нажми на лишнее.',
     render: (board, win) => choicePuzzle(board, ['🍎', '🍌', '🍇', '🚗', '🍐'], '🚗', win),
   },
   {
-    title: '2. Продолжи ряд',
+    level: 'easy', title: 'Продолжи ряд',
     task: 'Какой кружок будет следующим?',
     render: (board, win) => {
       board.insertAdjacentHTML('beforeend', '<div class="pzSeq">🔴🔵🔴🔵🔴❓</div>');
@@ -286,7 +351,7 @@ const PUZZLES = [
     },
   },
   {
-    title: '3. Загадка',
+    level: 'easy', title: 'Загадка',
     task: 'Отгадай, о чём это.',
     render: (board, win) => {
       board.insertAdjacentHTML('beforeend', '<div class="pzRiddle">«Зимой и летом —<br>одним цветом»</div>');
@@ -294,83 +359,68 @@ const PUZZLES = [
     },
   },
   {
-    title: '4. Пятнашки',
+    level: 'easy', title: 'Пятнашки',
     task: 'Расставь числа по порядку от 1 до 8. Нажимай на плитку рядом с пустым местом.',
+    render: (board, win) => slidingPuzzle(board, win, 6),
+  },
+  {
+    level: 'easy', title: 'Найди пары',
+    task: 'Открывай по две карточки и найди одинаковые.',
+    render: (board, win) => memoryPuzzle(board, win, ['🎅', '🎄', '⭐'], 3),
+  },
+
+  // ---------- Средние ----------
+  {
+    level: 'medium', title: 'Числовой ряд',
+    task: 'Каждое число больше предыдущего по одному правилу. Какое число следующее?',
     render: (board, win) => {
-      const grid = document.createElement('div');
-      grid.className = 'pz15';
-      board.appendChild(grid);
-      let tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0]; // 0 — пустое место
-      const neighbors = i => [i - 3, i + 3, i % 3 ? i - 1 : -1, i % 3 < 2 ? i + 1 : -1].filter(n => n >= 0 && n < 9);
-      // Лёгкий уровень: перемешиваем всего несколько ходов от собранного
-      let prev = -1;
-      for (let k = 0; k < 6 || tiles.join() === '1,2,3,4,5,6,7,8,0'; k++) {
-        const e = tiles.indexOf(0);
-        const opts = neighbors(e).filter(n => n !== prev);
-        const n = opts[Math.floor(Math.random() * opts.length)];
-        [tiles[e], tiles[n]] = [tiles[n], tiles[e]];
-        prev = e;
-      }
-      const draw = () => {
-        grid.innerHTML = '';
-        tiles.forEach((t, i) => {
-          const b = document.createElement('button');
-          b.textContent = t || '';
-          if (!t) b.className = 'empty';
-          b.onclick = () => {
-            const e = tiles.indexOf(0);
-            if (!neighbors(e).includes(i) || grid.dataset.done) return;
-            [tiles[e], tiles[i]] = [tiles[i], tiles[e]];
-            draw();
-            if (tiles.join() === '1,2,3,4,5,6,7,8,0') { grid.dataset.done = 1; win(); }
-          };
-          grid.appendChild(b);
-        });
-      };
-      draw();
+      board.insertAdjacentHTML('beforeend', '<div class="pzSeq">1, 2, 4, 8, ❓</div>');
+      choicePuzzle(board, ['10', '12', '16', '9'], '16', win);
     },
   },
   {
-    title: '5. Найди пары',
-    task: 'Открывай по две карточки и найди одинаковые.',
+    level: 'medium', title: 'Фруктовая математика',
+    task: 'Каждый фрукт — это число. Сколько стоит банан?',
     render: (board, win) => {
-      const grid = document.createElement('div');
-      grid.className = 'pzMemory';
-      board.appendChild(grid);
-      let open = [], found = 0, busy = false;
-      shuffle(['🎅', '🎅', '🎄', '🎄', '⭐', '⭐']).forEach(emoji => {
-        const b = document.createElement('button');
-        b.textContent = emoji;
-        b.onclick = () => {
-          if (busy || b.classList.contains('open') || b.classList.contains('matched')) return;
-          b.classList.add('open');
-          open.push(b);
-          if (open.length < 2) return;
-          const [a, c] = open; open = [];
-          if (a.textContent === c.textContent) {
-            a.classList.replace('open', 'matched'); c.classList.replace('open', 'matched');
-            if (++found === 3) win();
-          } else {
-            busy = true;
-            setTimeout(() => { a.classList.remove('open'); c.classList.remove('open'); busy = false; }, 800);
-          }
-        };
-        grid.appendChild(b);
-      });
+      board.insertAdjacentHTML('beforeend',
+        '<div class="pzRiddle" style="font-style:normal">🍎 + 🍎 = 10<br>🍎 + 🍌 = 8<br>🍌 = ❓</div>');
+      choicePuzzle(board, ['2', '3', '4', '5'], '3', win);
     },
+  },
+  {
+    level: 'medium', title: 'Задача на смекалку',
+    task: 'Подумай внимательно — тут есть подвох!',
+    render: (board, win) => {
+      board.insertAdjacentHTML('beforeend',
+        '<div class="pzRiddle">У Маши 3 брата.<br>У каждого брата одна сестра.<br>Сколько всего детей в семье?</div>');
+      choicePuzzle(board, ['4', '6', '7', '5'], '4', win);
+    },
+  },
+  {
+    level: 'medium', title: 'Пятнашки',
+    task: 'Теперь перемешано сильнее! Расставь числа от 1 до 8.',
+    render: (board, win) => slidingPuzzle(board, win, 30),
+  },
+  {
+    level: 'medium', title: 'Найди пары',
+    task: 'Уже 6 пар! Запоминай, где что лежит.',
+    render: (board, win) => memoryPuzzle(board, win, ['🎅', '🎄', '⭐', '❄️', '🎁', '⛄'], 4),
   },
 ];
 
+const LEVEL_NAMES = { easy: 'Лёгкие', medium: 'Средние' };
 let pzIndex = 0;
 let pzSolved = JSON.parse(localStorage.getItem('pzSolved') || '[]');
 const pzBoard = document.getElementById('pzBoard');
 const pzMsg = document.getElementById('pzMsg');
 const PRAISE = ['Молодец!', 'Отлично!', 'Супер!', 'Ты гений!', 'Здорово!'];
+const inLevel = lvl => PUZZLES.map((p, i) => i).filter(i => PUZZLES[i].level === lvl);
 
 function showPuzzle(i) {
   pzIndex = (i + PUZZLES.length) % PUZZLES.length;
   const p = PUZZLES[pzIndex];
-  document.getElementById('pzTitle').textContent = p.title;
+  const group = inLevel(p.level);
+  document.getElementById('pzTitle').textContent = `${group.indexOf(pzIndex) + 1}. ${p.title}`;
   document.getElementById('pzTask').textContent = p.task;
   pzMsg.textContent = ''; pzMsg.className = '';
   pzBoard.innerHTML = '';
@@ -381,18 +431,30 @@ function showPuzzle(i) {
     say(praise);
     if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
     if (!pzSolved.includes(pzIndex)) { pzSolved.push(pzIndex); localStorage.setItem('pzSolved', JSON.stringify(pzSolved)); }
-    if (pzSolved.length === PUZZLES.length) pzMsg.textContent = '🏆 Ты решил все головоломки!';
+    if (group.every(j => pzSolved.includes(j))) pzMsg.textContent = `🏆 Ты решил все ${LEVEL_NAMES[p.level].toLowerCase()} головоломки!`;
     drawLevels();
   });
   drawLevels();
 }
 
 function drawLevels() {
+  const current = PUZZLES[pzIndex].level;
+  // Переключатель «Лёгкие / Средние»
+  const groups = document.getElementById('pzGroups');
+  groups.innerHTML = '';
+  Object.entries(LEVEL_NAMES).forEach(([lvl, name]) => {
+    const b = document.createElement('button');
+    b.textContent = name;
+    if (lvl === current) b.classList.add('current');
+    b.onclick = () => showPuzzle(inLevel(lvl)[0]);
+    groups.appendChild(b);
+  });
+  // Кружки с номерами головоломок этого уровня
   const box = document.getElementById('pzLevels');
   box.innerHTML = '';
-  PUZZLES.forEach((_, i) => {
+  inLevel(current).forEach((i, n) => {
     const b = document.createElement('button');
-    b.textContent = i + 1;
+    b.textContent = n + 1;
     if (i === pzIndex) b.classList.add('current');
     if (pzSolved.includes(i)) b.classList.add('done');
     b.onclick = () => showPuzzle(i);
