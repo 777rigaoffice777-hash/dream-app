@@ -311,7 +311,7 @@ function slidingPuzzle(board, win, moves) {
 function memoryPuzzle(board, win, emojis, cols) {
   const grid = document.createElement('div');
   grid.className = 'pzMemory';
-  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
   board.appendChild(grid);
   let open = [], found = 0, busy = false;
   shuffle([...emojis, ...emojis]).forEach(emoji => {
