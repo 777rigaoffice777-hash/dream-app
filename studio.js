@@ -150,14 +150,56 @@ const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 48), new THREE.MeshBa
 ring.rotation.x = -Math.PI / 2;
 ring.visible = false;
 stage.scene.add(ring);
+// Пунктирная линия от поднятой фигуры до пола — видно, на какой она высоте
+const heightLine = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0)]),
+  new THREE.LineDashedMaterial({ color: '#ffb703', dashSize: 0.12, gapSize: 0.08 }));
+heightLine.computeLineDistances();
+heightLine.visible = false;
+stage.scene.add(heightLine);
+
 function updateRing() {
   ring.visible = !!selected;
+  heightLine.visible = false;
+  liftBox.hidden = !selected;
   if (!selected) return;
   const box = new THREE.Box3().setFromObject(selected), size = box.getSize(new THREE.Vector3());
   const r = Math.max(size.x, size.z) * 0.6 + 0.1;
   ring.scale.set(r, r, r);
   ring.position.set(selected.position.x, 0.01, selected.position.z);
+  const lift = selected.userData.data.lift;
+  if (lift > 0.05) {
+    heightLine.visible = true;
+    heightLine.position.set(selected.position.x, 0, selected.position.z);
+    heightLine.scale.set(1, lift, 1);
+  }
+  liftLabel.textContent = lift.toFixed(1);
 }
+
+// ---------- Поднять и опустить: кнопки ⬆ ⬇ справа (можно держать) ----------
+const MAX_LIFT = 6, LIFT_STEP = 0.05;
+const liftBox = document.getElementById('stLift');
+const liftLabel = document.getElementById('stLiftVal');
+function moveUpDown(delta) {
+  if (!selected) return;
+  const d = selected.userData.data;
+  const lift = Math.min(MAX_LIFT, Math.max(0, +(d.lift + delta).toFixed(2)));
+  if (lift !== d.lift) change({ lift });
+}
+function holdButton(btn, action) {
+  let timer = null;
+  const stop = () => { clearInterval(timer); timer = null; };
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    action();
+    stop();
+    timer = setInterval(action, 50); // держишь — едет дальше
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, stop));
+}
+holdButton(document.getElementById('stUp'), () => moveUpDown(LIFT_STEP));
+holdButton(document.getElementById('stDown'), () => moveUpDown(-LIFT_STEP));
+document.getElementById('stFloor').onclick = () => { if (selected) { change({ lift: 0 }); sfx('pop'); } };
 
 // Кнопки фигур сверху
 const shapesBar = document.getElementById('stShapes');
