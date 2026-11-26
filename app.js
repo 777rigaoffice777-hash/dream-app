@@ -628,7 +628,7 @@ function pictureGuess(board, win, item) {
 
 PICTURES.forEach(item => PUZZLES.push({
   level: 'pictures', title: 'Угадай картинку',
-  task: 'Что спрятано под плитками? Угадай как можно раньше!',
+  task: 'Что под плитками? Угадай побыстрее!',
   render: (board, win) => pictureGuess(board, win, item),
 }));
 
@@ -655,7 +655,9 @@ function showPuzzle(i) {
     say(praise);
     if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
     if (!pzSolved.includes(pzIndex)) { pzSolved.push(pzIndex); localStorage.setItem('pzSolved', JSON.stringify(pzSolved)); }
-    if (group.every(j => pzSolved.includes(j))) pzMsg.textContent = `🏆 Ты решил все ${LEVEL_NAMES[p.level].toLowerCase()} головоломки!`;
+    if (group.every(j => pzSolved.includes(j))) pzMsg.textContent = p.level === 'pictures'
+      ? '🏆 Ты угадал все картинки!'
+      : `🏆 Ты решил все ${LEVEL_NAMES[p.level].toLowerCase()} головоломки!`;
     drawLevels();
   });
   drawLevels();
