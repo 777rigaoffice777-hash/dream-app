@@ -1,4 +1,4 @@
-/* build 43 */
+/* build 44 */
 // ===== Переключение экранов =====
 document.querySelectorAll('nav button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1044,7 +1044,9 @@ function sbDraw() {
     el.querySelector('.sbLabel').textContent = b.label;
     const isCustom = i >= SOUND_BUTTONS.length;
     if (sbEditing && isCustom) el.insertAdjacentHTML('beforeend', '<span class="sbDel">✕</span>');
-    el.addEventListener('pointerdown', () => {
+    // click, а не pointerdown: если палец двигает поле — кнопка не звучит, звучит только настоящее нажатие
+    el.addEventListener('click', () => {
+      if (sbPanned) return;          // мышкой тянули поле — это не нажатие
       if (sbEditing) {
         if (isCustom && confirm(`Удалить кнопку «${b.label}»?`)) {
           sbCustom = sbCustom.filter(x => x !== b);
@@ -1060,6 +1062,33 @@ function sbDraw() {
     sbGrid.appendChild(el);
   });
 }
+// ---------- Большое поле: двигай вправо, влево, вверх и вниз ----------
+// Пальцем поле листается само (прокрутка в обе стороны). Для мышки — тянем поле с зажатой кнопкой.
+const sbScroll = document.getElementById('sbScroll');
+let sbPan = null, sbPanned = false;
+function sbCenter(smooth) {
+  const grid = sbGrid.getBoundingClientRect(), box = sbScroll.getBoundingClientRect();
+  sbScroll.scrollTo({
+    left: sbScroll.scrollLeft + grid.left - box.left - (box.width - grid.width) / 2,
+    top: sbScroll.scrollTop + grid.top - box.top - Math.max(10, (box.height - grid.height) / 2),
+    behavior: smooth ? 'smooth' : 'auto',
+  });
+}
+document.getElementById('sbCenter').onclick = () => sbCenter(true);
+document.querySelector('nav [data-screen=sounds]').addEventListener('click', () => requestAnimationFrame(() => sbCenter(false)));
+sbScroll.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse') return; // на телефоне прокрутка пальцем работает сама
+  sbPan = { x: e.clientX, y: e.clientY, l: sbScroll.scrollLeft, t: sbScroll.scrollTop };
+  sbPanned = false;
+});
+window.addEventListener('pointermove', e => {
+  if (!sbPan) return;
+  const dx = e.clientX - sbPan.x, dy = e.clientY - sbPan.y;
+  if (Math.hypot(dx, dy) > 6) sbPanned = true;
+  sbScroll.scrollLeft = sbPan.l - dx; sbScroll.scrollTop = sbPan.t - dy;
+});
+window.addEventListener('pointerup', () => { sbPan = null; setTimeout(() => { sbPanned = false; }, 0); });
+
 document.getElementById('sbEdit').onclick = e => {
   sbEditing = !sbEditing;
   e.currentTarget.textContent = sbEditing ? '✅ Готово' : '✏️ Изменить';

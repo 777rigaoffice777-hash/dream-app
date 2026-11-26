@@ -7,11 +7,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
-  <meta name="app-version" content="43">
+  <meta name="app-version" content="44">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=43">
+  <link rel="stylesheet" href="style.css?v=44">
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
   </script>
@@ -265,11 +265,14 @@
 
     <!-- Звуковые кнопки -->
     <section id="sounds" class="screen">
-      <h2>🔊 Звуковые кнопки</h2>
-      <div id="sbGrid"></div>
-      <div class="row sbBar">
-        <button id="sbAdd">➕ Своя кнопка</button>
+      <div class="sbTop">
+        <button id="sbAdd">➕ Своя</button>
         <button id="sbEdit">✏️ Изменить</button>
+        <button id="sbCenter" title="К кнопкам">🎯</button>
+      </div>
+      <!-- Большое поле: двигай пальцем в любую сторону -->
+      <div class="sbScroll" id="sbScroll">
+        <div class="sbBoard"><div id="sbGrid"></div></div>
       </div>
       <div class="sbDialog" id="sbDialog" hidden>
         <div class="sbBox">
@@ -345,7 +348,7 @@
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=43"></script>
-  <script type="module" src="studio.js?v=43"></script>
+  <script src="app.js?v=44"></script>
+  <script type="module" src="studio.js?v=44"></script>
 </body>
 </html>
