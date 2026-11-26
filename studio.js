@@ -79,13 +79,13 @@ function makeStage(container) {
   scene.add(sun);
 
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-  camera.position.set(4, 4, 6);
+  camera.position.set(5.5, 5, 8.5);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 0.6, 0);
   controls.enableDamping = true;
   controls.enablePan = false;
   controls.minDistance = 2.5;
-  controls.maxDistance = 18;
+  controls.maxDistance = 25;
   controls.maxPolarAngle = Math.PI / 2 - 0.05; // не заглядывать под пол
   controls.autoRotateSpeed = 3;
 
@@ -121,6 +121,21 @@ function applyData(mesh) {
   mesh.position.y = d.lift - box.min.y; // ставим на пол (или на высоту «Поднять»)
 }
 function disposeMesh(mesh) { mesh.geometry.dispose(); mesh.material.dispose(); }
+
+// Наводит камеру так, чтобы все фигуры были видны целиком
+function fitCamera(st, list) {
+  if (!list.length) return;
+  const box = new THREE.Box3();
+  list.forEach(o => box.expandByObject(o));
+  const center = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+  const radius = Math.max(size.length() / 2, 1);
+  const fov = THREE.MathUtils.degToRad(st.camera.fov);
+  const dist = radius / Math.sin(Math.min(fov, fov * st.camera.aspect) / 2) * 1.1;
+  const dir = st.camera.position.clone().sub(st.controls.target).normalize();
+  st.controls.target.copy(center);
+  st.camera.position.copy(center).add(dir.multiplyScalar(Math.min(Math.max(dist, st.controls.minDistance), st.controls.maxDistance)));
+  st.controls.update();
+}
 
 // ===================== 3D-мастерская =====================
 const studio = document.getElementById('studio');
@@ -229,6 +244,7 @@ document.getElementById('stAuto').onclick = e => {
   stage.controls.autoRotate = !stage.controls.autoRotate;
   e.currentTarget.classList.toggle('on', stage.controls.autoRotate);
 };
+document.getElementById('stFit').onclick = () => fitCamera(stage, objects);
 document.getElementById('stNew').onclick = () => {
   if (objects.length && !confirm('Начать новый объект? Несохранённое пропадёт.')) return;
   loadObjects([]); editingId = null; saveDraft();
@@ -306,12 +322,15 @@ const setProducts = list => localStorage.setItem('products3d', JSON.stringify(li
 function makeThumb() {
   const keep = selected;
   select(null); // без жёлтого кольца на картинке
-  stage.controls.update();
+  // Для картинки наводим камеру на весь объект, потом возвращаем как было
+  const camPos = stage.camera.position.clone(), target = stage.controls.target.clone();
+  fitCamera(stage, objects);
   stage.renderer.render(stage.scene, stage.camera);
   const src = stage.renderer.domElement, c = document.createElement('canvas');
-  const w = 240, h = Math.round(240 * src.height / src.width);
+  const w = 240, h = 180, srcH = src.width * h / w; // вырезаем середину кадра 4:3
   c.width = w; c.height = h;
-  c.getContext('2d').drawImage(src, 0, 0, w, h);
+  c.getContext('2d').drawImage(src, 0, Math.max(0, (src.height - srcH) / 2), src.width, Math.min(src.height, srcH), 0, 0, w, h);
+  stage.camera.position.copy(camPos); stage.controls.target.copy(target); stage.controls.update();
   if (keep) select(keep);
   return c.toDataURL('image/jpeg', 0.8);
 }
@@ -374,6 +393,8 @@ function openViewer(id) {
   }
   viewObjects.forEach(o => { viewStage.scene.remove(o); disposeMesh(o); });
   viewObjects = p.objects.map(d => { const m = buildMesh({ ...d }); viewStage.scene.add(m); return m; });
+  // Размер окна просмотра становится известен чуть позже — тогда и наводим камеру
+  requestAnimationFrame(() => requestAnimationFrame(() => fitCamera(viewStage, viewObjects)));
 }
 document.getElementById('prClose').onclick = () => { viewer.hidden = true; viewingId = null; };
 document.getElementById('prDelete').onclick = () => {
@@ -393,6 +414,7 @@ document.getElementById('prEdit').onclick = () => {
   saveDraft();
   viewer.hidden = true; viewingId = null;
   document.querySelector('nav [data-screen=studio]').click();
+  requestAnimationFrame(() => requestAnimationFrame(() => fitCamera(stage, objects)));
 };
 document.querySelector('nav [data-screen=products]').addEventListener('click', renderProducts);
 renderProducts();
