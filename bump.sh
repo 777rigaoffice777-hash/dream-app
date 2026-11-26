@@ -8,5 +8,7 @@ n=$((v + 1))
 sed -i "s/?v=[0-9]*/?v=$n/g" index.html
 sed -i "s/name=\"app-version\" content=\"[0-9]*\"/name=\"app-version\" content=\"$n\"/" index.html
 sed -i "s/masterskaya-v[0-9]*/masterskaya-v$n/" sw.js
+# Метка версии в каждом файле с кодом — по ней приложение понимает, что выкладка закончилась
+sed -i "1s#^/\* build [0-9]* \*/#/* build $n */#" app.js studio.js
 printf '{ "v": %s }\n' "$n" > version.json
 echo "Версия $n"

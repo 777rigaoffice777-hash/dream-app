@@ -1,3 +1,4 @@
+/* build 36 */
 // ===== Переключение экранов =====
 document.querySelectorAll('nav button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1107,6 +1108,12 @@ async function checkForUpdate() {
     const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
     const { v } = await r.json();
     if (String(v) === APP_VERSION) return;
+    // GitHub выкладывает файлы не одновременно. Обновляемся, только когда ВСЕ файлы уже новые —
+    // в каждом есть строчка /* build N */. Уникальный ?t= — чтобы не закешировать старую копию.
+    for (const f of ['app.js', 'studio.js']) {
+      const code = await (await fetch(`${f}?v=${v}&t=${Date.now()}`, { cache: 'no-store' })).text();
+      if (!code.includes(`/* build ${v} */`)) return; // ещё выкладывается — проверим позже
+    }
     // Защита от бесконечной перезагрузки: на каждую новую версию — не больше одной попытки
     if (sessionStorage.getItem('reloadedFor') === String(v)) return;
     sessionStorage.setItem('reloadedFor', v);
