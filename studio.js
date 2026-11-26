@@ -1,4 +1,4 @@
-/* build 38 */
+/* build 39 */
 // ===== 3D-мастерская и вкладка «Продукты» =====
 // Объект собирается из фигур. Каждую фигуру можно двигать пальцем, красить,
 // менять размер и поворачивать. Готовый объект сохраняется в «Продукты».
@@ -224,7 +224,7 @@ function buildMesh(data) {
 function applyData(node) {
   const d = node.userData.data, rad = THREE.MathUtils.degToRad;
   if (node.isMesh) styleMesh(node);
-  node.scale.set(d.s, d.s * d.sy, d.s);
+  node.scale.set(d.s * (d.sx ?? 1), d.s * d.sy, d.s * (d.sz ?? 1)); // sx, sz — вытянуть вширь и вглубь
   node.rotation.set(rad(d.rx), rad(d.ry), rad(d.rz));
   node.position.set(d.x, 0, d.z);
   node.updateMatrixWorld(true);
@@ -272,6 +272,7 @@ heightLine.visible = false;
 stage.scene.add(heightLine);
 
 function updateRing() {
+  updateHandles();
   ring.visible = !!selected;
   heightLine.visible = false;
   liftBox.hidden = !selected;
@@ -313,6 +314,82 @@ function holdButton(btn, action) {
 holdButton(document.getElementById('stUp'), () => moveUpDown(LIFT_STEP));
 holdButton(document.getElementById('stDown'), () => moveUpDown(-LIFT_STEP));
 document.getElementById('stFloor').onclick = () => { if (selected) { change({ lift: 0 }); sfx('pop'); } };
+
+// ---------- Вытянуть фигуру за цветные стрелки ----------
+// Красная — в ширину, зелёная — в высоту, синяя — в глубину.
+// Стрелки повёрнуты вместе с фигурой: тянешь вдоль её собственных сторон.
+const AXES = [
+  { k: 'sx', i: 0, color: 0xff3b3b, dir: new THREE.Vector3(1, 0, 0), both: true },
+  { k: 'sy', i: 1, color: 0x2ecc40, dir: new THREE.Vector3(0, 1, 0), both: false }, // низ стоит на месте
+  { k: 'sz', i: 2, color: 0x1e5bff, dir: new THREE.Vector3(0, 0, 1), both: true },
+];
+const handles = AXES.map(ax => {
+  const h = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({ color: ax.color, depthTest: false });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.35, 12).translate(0, 0.175, 0), mat);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.26, 20).translate(0, 0.48, 0), mat);
+  const hitArea = new THREE.Mesh(new THREE.SphereGeometry(0.34, 12, 8).translate(0, 0.4, 0), new THREE.MeshBasicMaterial({ visible: false }));
+  [shaft, tip, hitArea].forEach(m => { m.renderOrder = 20; h.add(m); });
+  h.userData.axis = ax;
+  h.visible = false;
+  stage.scene.add(h);
+  return h;
+});
+let stretch = null;
+
+// Коробка вокруг объекта в его собственных координатах (без поворота и растяжения)
+function localBox(node) {
+  node.updateMatrixWorld(true);
+  const inv = node.matrixWorld.clone().invert(), box = new THREE.Box3();
+  meshesOf(node).forEach(m => {
+    if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+    box.union(m.geometry.boundingBox.clone().applyMatrix4(inv.clone().multiply(m.matrixWorld)));
+  });
+  return box;
+}
+function updateHandles() {
+  const show = !!selected && !mergeSet;
+  handles.forEach(h => { h.visible = show; });
+  if (!show) return;
+  const lb = localBox(selected), q = selected.getWorldQuaternion(new THREE.Quaternion());
+  handles.forEach(h => {
+    const ax = h.userData.axis;
+    const p = lb.getCenter(new THREE.Vector3());
+    p.setComponent(ax.i, lb.max.getComponent(ax.i));           // середина стороны
+    const dir = ax.dir.clone().applyQuaternion(q).normalize();
+    h.position.copy(p.applyMatrix4(selected.matrixWorld)).addScaledVector(dir, 0.04);
+    h.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  });
+}
+function toScreen(v) {
+  const r = stage.renderer.domElement.getBoundingClientRect(), p = v.clone().project(stage.camera);
+  return { x: r.left + (p.x + 1) / 2 * r.width, y: r.top + (1 - p.y) / 2 * r.height };
+}
+function grabHandle(e) {
+  const hit = raycaster.intersectObjects(handles.filter(h => h.visible), true)[0];
+  if (!hit) return false;
+  let h = hit.object;
+  while (!h.userData.axis) h = h.parent;
+  const ax = h.userData.axis, d = selected.userData.data;
+  const len = localBox(selected).getSize(new THREE.Vector3()).getComponent(ax.i) * selected.scale.getComponent(ax.i);
+  // Сколько пикселей экрана приходится на 1 метр вдоль стрелки
+  const dir = new THREE.Vector3(0, 1, 0).applyQuaternion(h.quaternion);
+  const a = toScreen(h.position), b = toScreen(h.position.clone().add(dir));
+  stage.controls.enabled = false;
+  stretch = { id: e.pointerId, ax, start: d[ax.k] ?? 1, len, x: e.clientX, y: e.clientY, vx: b.x - a.x, vy: b.y - a.y };
+  return true;
+}
+function moveHandle(e) {
+  const st = stretch, v2 = st.vx * st.vx + st.vy * st.vy;
+  if (v2 < 4 || !selected) return; // стрелка смотрит прямо на нас — тянуть не получится
+  const move = ((e.clientX - st.x) * st.vx + (e.clientY - st.y) * st.vy) / v2; // в метрах
+  const newLen = Math.max(0.05, st.len + (st.ax.both ? 2 * move : move));
+  const val = Math.min(6, Math.max(0.1, st.start * newLen / st.len));
+  selected.userData.data[st.ax.k] = +val.toFixed(3);
+  applyData(selected);
+  updateRing();
+  syncPanel();
+}
 
 // Кнопки фигур сверху, по группам. Картинки на кнопках рисуются в 3D при запуске
 const shapesBar = document.getElementById('stShapes');
@@ -383,7 +460,7 @@ function select(mesh) {
   hint.textContent = !objects.length ? 'Добавь фигуру сверху 👆'
     : !mesh ? 'Нажми на фигуру, чтобы её выбрать. Крути сцену пальцем'
     : mesh.isGroup ? 'Это объединённый объект. ✂ — разъединить'
-    : 'Тащи фигуру пальцем. 🔗 — объединить с другими';
+    : 'Тяни цветные стрелки, чтобы вытянуть. 🔗 — объединить';
 }
 
 // ---------- Панель настроек выбранной фигуры ----------
@@ -420,7 +497,7 @@ function syncPanel() {
   const d = selected.userData.data, look = meshesOf(selected)[0].userData.data;
   colorsBox.querySelectorAll('button').forEach(b => b.classList.toggle('sel', b.dataset.color === look.color));
   panel.querySelectorAll('[data-finish]').forEach(b => b.classList.toggle('sel', b.dataset.finish === look.finish));
-  panel.querySelectorAll('input[type=range]').forEach(inp => inp.value = d[inp.dataset.k]);
+  panel.querySelectorAll('input[type=range]').forEach(inp => inp.value = d[inp.dataset.k] ?? 1);
 }
 
 // ---------- Объединить и разъединить ----------
@@ -465,6 +542,7 @@ function endMerge() {
 }
 function updateMergeBar() {
   mergeBar.hidden = !mergeSet;
+  updateHandles();
   if (!mergeSet) return;
   document.getElementById('stMergeCount').textContent = mergeSet.size;
   document.getElementById('stMergeOk').disabled = mergeSet.size < 2;
@@ -501,7 +579,7 @@ function unmerge(group) {
     const d = { ...structuredClone(c.userData.data),
       x: +pos.x.toFixed(3), z: +pos.z.toFixed(3),
       lift: Math.max(0, +new THREE.Box3().setFromObject(c).min.y.toFixed(3)),
-      s: +sc.x.toFixed(3), sy: +(sc.y / sc.x).toFixed(3),
+      s: +sc.x.toFixed(3), sx: 1, sy: +(sc.y / sc.x).toFixed(3), sz: +(sc.z / sc.x).toFixed(3),
       rx: Math.round(deg(e.x)), ry: Math.round((deg(e.y) + 360) % 360), rz: Math.round(deg(e.z)) };
     delete d.m;
     return d;
@@ -576,6 +654,7 @@ view.addEventListener('pointerdown', e => {
   // Попали в часть объединённого объекта — берём весь объект
   let node = hit && hit.object;
   while (node && !objects.includes(node)) node = node.parent;
+  if (!mergeSet && selected && grabHandle(e)) return; // потянули за стрелку — вытягиваем
   if (node && mergeSet) {          // режим объединения: нажатие добавляет или убирает фигуру
     toggleMerge(node);
   } else if (node) {
@@ -588,6 +667,7 @@ view.addEventListener('pointerdown', e => {
   }
 }, { capture: true });
 window.addEventListener('pointermove', e => {
+  if (stretch && e.pointerId === stretch.id) return moveHandle(e);
   if (!drag || e.pointerId !== drag.id) return;
   setPointer(e);
   const p = floorPoint();
@@ -601,6 +681,12 @@ window.addEventListener('pointermove', e => {
   drag.moved = true;
 });
 window.addEventListener('pointerup', e => {
+  if (stretch && e.pointerId === stretch.id) {
+    stretch = null;
+    stage.controls.enabled = true;
+    saveDraft();
+    return;
+  }
   if (drag && e.pointerId === drag.id) {
     drag = null;
     stage.controls.enabled = true;
