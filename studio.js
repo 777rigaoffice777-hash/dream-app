@@ -7,26 +7,112 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 // ---------- Фигуры, из которых можно строить ----------
-// Чтобы добавить свою фигуру — допиши строку с name, icon и make (как она строится)
+// Чтобы добавить свою фигуру — допиши строку: group (в какой ряд), name и make (как она строится).
+// flat: true — чёткие рёбра у граней (для угловатых фигур)
+const P = Math.PI;
 const SHAPES3D = {
-  cube:     { name: 'Куб',      icon: '🟥', make: () => new THREE.BoxGeometry(1, 1, 1) },
-  sphere:   { name: 'Шар',      icon: '⚪', make: () => new THREE.SphereGeometry(0.6, 40, 20) },
-  cylinder: { name: 'Цилиндр',  icon: '🥫', make: () => new THREE.CylinderGeometry(0.5, 0.5, 1, 40) },
-  cone:     { name: 'Конус',    icon: '🍦', make: () => new THREE.ConeGeometry(0.6, 1.2, 40) },
-  pyramid:  { name: 'Пирамида', icon: '🔺', make: () => new THREE.ConeGeometry(0.75, 1, 4).rotateY(Math.PI / 4) },
-  torus:    { name: 'Бублик',   icon: '🍩', make: () => new THREE.TorusGeometry(0.45, 0.2, 20, 48) },
-  star:     { name: 'Звезда',   icon: '⭐', make: () => extrude(starShape()) },
-  heart:    { name: 'Сердце',   icon: '❤️', make: () => extrude(heartShape()).rotateZ(Math.PI) },
+  // ----- Круглые -----
+  sphere:    { group: 'round', name: 'Шар',              make: () => new THREE.SphereGeometry(0.6, 40, 20) },
+  hemisphere:{ group: 'round', name: 'Полушар',          make: () => lathe(arcPoints(0.6, 0, P / 2), true) },
+  egg:       { group: 'round', name: 'Яйцо',             make: () => lathe(eggPoints()) },
+  cylinder:  { group: 'round', name: 'Цилиндр',          make: () => new THREE.CylinderGeometry(0.5, 0.5, 1, 40) },
+  halfcyl:   { group: 'round', name: 'Полуцилиндр',      make: () => extrude(halfDisc(), 1, false) },
+  cone:      { group: 'round', name: 'Конус',            make: () => new THREE.ConeGeometry(0.6, 1.2, 40) },
+  frustum:   { group: 'round', name: 'Усечённый конус',  make: () => new THREE.CylinderGeometry(0.3, 0.6, 1, 40) },
+  capsule:   { group: 'round', name: 'Капсула',          make: () => new THREE.CapsuleGeometry(0.35, 0.6, 10, 24) },
+  disc:      { group: 'round', name: 'Диск',             make: () => new THREE.CylinderGeometry(0.7, 0.7, 0.15, 48) },
+  pipe:      { group: 'round', name: 'Труба',            make: () => extrude(ringShape(0.5, 0.36), 1, false).rotateX(P / 2) },
+  torus:     { group: 'round', name: 'Бублик',           make: () => new THREE.TorusGeometry(0.45, 0.2, 20, 48) },
+  ring:      { group: 'round', name: 'Кольцо',           make: () => new THREE.TorusGeometry(0.5, 0.07, 12, 64) },
+  knot:      { group: 'round', name: 'Узел',             make: () => new THREE.TorusKnotGeometry(0.4, 0.13, 128, 16) },
+  spring:    { group: 'round', name: 'Пружина',          make: () => new THREE.TubeGeometry(new Helix(), 240, 0.06, 10) },
+  // ----- Угловатые -----
+  cube:      { group: 'angular', name: 'Куб',            flat: true, make: () => new THREE.BoxGeometry(1, 1, 1) },
+  brick:     { group: 'angular', name: 'Брусок',         flat: true, make: () => new THREE.BoxGeometry(1.6, 0.6, 0.8) },
+  tile:      { group: 'angular', name: 'Плитка',         flat: true, make: () => new THREE.BoxGeometry(1.2, 0.12, 1.2) },
+  wedge:     { group: 'angular', name: 'Клин',           flat: true, make: () => extrude(polygon([[0, 0], [1.2, 0], [0, 0.8]]), 0.8, false) },
+  prism3:    { group: 'angular', name: 'Треуг. призма',  flat: true, make: () => new THREE.CylinderGeometry(0.6, 0.6, 1, 3) },
+  prism5:    { group: 'angular', name: 'Пятиуг. призма', flat: true, make: () => new THREE.CylinderGeometry(0.55, 0.55, 1, 5) },
+  prism6:    { group: 'angular', name: 'Шестиуг. призма',flat: true, make: () => new THREE.CylinderGeometry(0.55, 0.55, 1, 6) },
+  prism8:    { group: 'angular', name: 'Восьмиуг. призма',flat: true, make: () => new THREE.CylinderGeometry(0.55, 0.55, 1, 8) },
+  pyramid3:  { group: 'angular', name: 'Треуг. пирамида',flat: true, make: () => new THREE.ConeGeometry(0.7, 1, 3) },
+  pyramid:   { group: 'angular', name: 'Пирамида',       flat: true, make: () => new THREE.ConeGeometry(0.75, 1, 4).rotateY(P / 4) },
+  pyramid6:  { group: 'angular', name: 'Шестиуг. пирамида', flat: true, make: () => new THREE.ConeGeometry(0.65, 1, 6) },
+  tetra:     { group: 'angular', name: 'Тетраэдр',       flat: true, make: () => new THREE.TetrahedronGeometry(0.75) },
+  octa:      { group: 'angular', name: 'Октаэдр',        flat: true, make: () => new THREE.OctahedronGeometry(0.65) },
+  dodeca:    { group: 'angular', name: 'Додекаэдр',      flat: true, make: () => new THREE.DodecahedronGeometry(0.6) },
+  icosa:     { group: 'angular', name: 'Икосаэдр',       flat: true, make: () => new THREE.IcosahedronGeometry(0.62) },
+  parallelogram: { group: 'angular', name: 'Параллелограмм', flat: true, make: () => extrude(polygon([[0, 0], [1, 0], [1.4, 0.7], [0.4, 0.7]]), 0.4, false) },
+  // ----- Фигурные -----
+  star:      { group: 'fancy', name: 'Звезда',           make: () => extrude(starShape()) },
+  heart:     { group: 'fancy', name: 'Сердце',           make: () => extrude(heartShape()).rotateZ(P) },
+  moon:      { group: 'fancy', name: 'Полумесяц',        make: () => extrude(moonShape()) },
+  cross:     { group: 'fancy', name: 'Крест',            make: () => extrude(polygon([[-.15,-.55],[.15,-.55],[.15,-.15],[.55,-.15],[.55,.15],[.15,.15],[.15,.55],[-.15,.55],[-.15,.15],[-.55,.15],[-.55,-.15],[-.15,-.15]])) },
+  arrow:     { group: 'fancy', name: 'Стрелка',          make: () => extrude(polygon([[-.6,-.15],[.1,-.15],[.1,-.38],[.6,0],[.1,.38],[.1,.15],[-.6,.15]])) },
+  drop:      { group: 'fancy', name: 'Капля',            make: () => lathe(dropPoints()) },
+  trapezoid: { group: 'fancy', name: 'Трапеция',         make: () => extrude(polygon([[-.6, -.35], [.6, -.35], [.3, .35], [-.3, .35]])) },
 };
+const SHAPE_GROUPS = { round: 'Круглые', angular: 'Угловатые', fancy: 'Фигурные' };
 const PALETTE = ['#ff595e', '#ff924c', '#ffca3a', '#8ac926', '#2ec4b6', '#1982c4', '#6a4c93',
                  '#ff6fb5', '#8d5524', '#ffffff', '#8a8a8a', '#222222'];
 const FINISH = { matte: { roughness: 0.9, metalness: 0 }, gloss: { roughness: 0.25, metalness: 0 }, metal: { roughness: 0.25, metalness: 0.9 } };
 const MAX_OBJECTS = 40;
 
-function extrude(shape) {
-  const g = new THREE.ExtrudeGeometry(shape, { depth: 0.3, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3, curveSegments: 24 });
+function extrude(shape, depth = 0.3, bevel = true) {
+  const g = new THREE.ExtrudeGeometry(shape, bevel
+    ? { depth, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3, curveSegments: 24 }
+    : { depth, bevelEnabled: false, curveSegments: 40 });
   g.center();
   return g;
+}
+// Тело вращения: points — контур половинки (x — расстояние от оси, y — высота)
+function lathe(points) {
+  const g = new THREE.LatheGeometry(points.map(([x, y]) => new THREE.Vector2(Math.max(x, 0.0001), y)), 48);
+  g.center();
+  return g;
+}
+const polygon = pts => new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+function arcPoints(r, from, to, n = 24) {
+  // дуга + точки на оси, чтобы фигура была закрыта снизу
+  const pts = [[0, 0], [r, 0]];
+  for (let i = 0; i <= n; i++) { const a = from + (to - from) * i / n; pts.push([r * Math.cos(a), r * Math.sin(a)]); }
+  return pts;
+}
+function eggPoints(n = 32) {
+  return [...Array(n + 1)].map((_, i) => {
+    const t = P * i / n;
+    return [0.45 * Math.sin(t) * (1 - 0.12 * Math.cos(t)), -0.62 * Math.cos(t)];
+  });
+}
+function dropPoints(n = 40) {
+  return [...Array(n + 1)].map((_, i) => {
+    const t = P * i / n; // снизу круглая, сверху острая
+    return [0.5 * Math.sin(t) * Math.pow((1 + Math.cos(t)) / 2, 0.9), -0.55 * Math.cos(t)];
+  });
+}
+function halfDisc() {
+  const s = new THREE.Shape();
+  s.absarc(0, 0, 0.55, 0, P, false);
+  s.lineTo(0.55, 0);
+  return s;
+}
+function ringShape(outer, inner) {
+  const s = new THREE.Shape(); s.absarc(0, 0, outer, 0, P * 2, false);
+  const h = new THREE.Path(); h.absarc(0, 0, inner, 0, P * 2, true);
+  s.holes.push(h);
+  return s;
+}
+function moonShape() {
+  const s = new THREE.Shape();
+  s.absarc(0, 0, 0.6, 0.958, P * 2 - 0.958, false);   // большая дуга
+  s.absarc(0.25, 0, 0.5, -1.38, 1.38, true);           // вырез
+  return s;
+}
+class Helix extends THREE.Curve {
+  getPoint(t, target = new THREE.Vector3()) {
+    const a = t * P * 2 * 4; // 4 витка
+    return target.set(Math.cos(a) * 0.4, t * 1.2 - 0.6, Math.sin(a) * 0.4);
+  }
 }
 function starShape() {
   const s = new THREE.Shape();
@@ -102,7 +188,8 @@ function makeStage(container) {
 
 // Создаёт 3D-фигуру по описанию (тип, цвет, размер, поворот, место)
 function buildMesh(data) {
-  const mesh = new THREE.Mesh(SHAPES3D[data.type].make(), new THREE.MeshStandardMaterial());
+  const def = SHAPES3D[data.type] || SHAPES3D.cube;
+  const mesh = new THREE.Mesh(def.make(), new THREE.MeshStandardMaterial({ flatShading: !!def.flat, side: THREE.DoubleSide }));
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   mesh.userData.data = data;
@@ -201,14 +288,46 @@ holdButton(document.getElementById('stUp'), () => moveUpDown(LIFT_STEP));
 holdButton(document.getElementById('stDown'), () => moveUpDown(-LIFT_STEP));
 document.getElementById('stFloor').onclick = () => { if (selected) { change({ lift: 0 }); sfx('pop'); } };
 
-// Кнопки фигур сверху
+// Кнопки фигур сверху, по группам. Картинки на кнопках рисуются в 3D при запуске
 const shapesBar = document.getElementById('stShapes');
-Object.entries(SHAPES3D).forEach(([type, s]) => {
-  const b = document.createElement('button');
-  b.innerHTML = `<span>${s.icon}</span>${s.name}`;
-  b.onclick = () => addObject(type);
-  shapesBar.appendChild(b);
+const iconRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+iconRenderer.setSize(96, 96, false);
+const iconScene = new THREE.Scene();
+iconScene.add(new THREE.HemisphereLight(0xffffff, 0x667799, 1.4));
+const iconSun = new THREE.DirectionalLight(0xffffff, 2);
+iconSun.position.set(2, 3, 4);
+iconScene.add(iconSun);
+const iconCam = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
+let iconColor = 0;
+function shapeIcon(type) {
+  const def = SHAPES3D[type];
+  const mesh = new THREE.Mesh(def.make(), new THREE.MeshStandardMaterial({
+    color: PALETTE[iconColor++ % 7], roughness: 0.4, flatShading: !!def.flat, side: THREE.DoubleSide }));
+  mesh.geometry.computeBoundingSphere();
+  const r = mesh.geometry.boundingSphere.radius, c = mesh.geometry.boundingSphere.center;
+  iconCam.position.set(c.x + r * 1.6, c.y + r * 1.3, c.z + r * 2.2);
+  iconCam.lookAt(c);
+  iconScene.add(mesh);
+  iconRenderer.render(iconScene, iconCam);
+  iconScene.remove(mesh); disposeMesh(mesh);
+  return iconRenderer.domElement.toDataURL('image/png');
+}
+Object.entries(SHAPE_GROUPS).forEach(([group, title]) => {
+  const label = document.createElement('div');
+  label.className = 'stGroup';
+  label.textContent = title;
+  shapesBar.appendChild(label);
+  Object.entries(SHAPES3D).filter(([, s]) => s.group === group).forEach(([type, s]) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<img alt=""><b></b>`;
+    b.querySelector('img').src = shapeIcon(type);
+    b.querySelector('b').textContent = s.name;
+    b.onclick = () => addObject(type);
+    shapesBar.appendChild(b);
+  });
 });
+iconRenderer.dispose();
+iconRenderer.forceContextLoss(); // освобождаем видеокарту — картинки уже нарисованы
 
 function addObject(type) {
   if (objects.length >= MAX_OBJECTS) return showToast('Больше ' + MAX_OBJECTS + ' фигур нельзя');

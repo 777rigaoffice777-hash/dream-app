@@ -371,3 +371,14 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 }
 .stLift #stFloor { background: #c8d6f0; font-size: .85rem; }
 #stLiftVal { font-size: .6rem; font-weight: 800; color: #1b1440; }
+
+/* 3D: кнопки фигур с картинками и подписи групп */
+.stShapes { align-items: stretch; }
+.stShapes button { width: 64px; padding: 4px 2px; justify-content: flex-start; }
+.stShapes button img { width: 40px; height: 40px; }
+.stShapes button b { font-weight: 600; font-size: .45rem; line-height: 1.1; text-align: center; white-space: normal; }
+.stGroup {
+  flex: 0 0 auto; writing-mode: vertical-rl; transform: rotate(180deg);
+  font-size: .45rem; font-weight: 800; color: var(--accent); text-align: center;
+  padding: 2px; border-left: 2px solid var(--accent); margin-left: 4px;
+}
