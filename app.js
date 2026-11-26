@@ -537,8 +537,10 @@ function lightsPuzzle(board, win, size, presses) {
     });
   };
   // Начинаем с «всё выключено» и делаем случайные нажатия — так задача всегда решаема
-  const picks = shuffle([...Array(N).keys()]).slice(0, presses);
-  picks.forEach(toggle);
+  do { // если нажатия случайно погасили друг друга — перемешиваем заново
+    on.fill(false);
+    shuffle([...Array(N).keys()]).slice(0, presses).forEach(toggle);
+  } while (on.every(x => !x));
   const draw = () => {
     grid.innerHTML = '';
     on.forEach((isOn, i) => {
