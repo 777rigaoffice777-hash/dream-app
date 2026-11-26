@@ -708,10 +708,23 @@ function shapeScore(type, drawn) {
   const d1 = drawn.reduce((s, p) => s + nearest(p, ideal), 0) / drawn.length;   // рисунок рядом с фигурой?
   const d2 = ideal.reduce((s, p) => s + nearest(p, drawn), 0) / ideal.length;   // вся фигура нарисована?
   let score = Math.max(0, 1 - ((d1 + d2) / 2 / diag) / 0.09) * 100;
+
+  // Вся ли фигура нарисована? (незамкнутый круг — не круг)
+  const covered = ideal.filter(p => nearest(p, drawn) < 0.06 * diag).length / ideal.length;
+  score *= Math.min(1, covered / 0.95) ** 2;
+
+  // У круга и квадрата ширина ≈ высоте
   if (SHAPES[type].equalSides) {
-    const aspect = Math.min(w, h) / Math.max(w, h);   // у круга и квадрата ширина ≈ высоте
-    if (aspect < 0.8) score *= aspect / 0.8;
+    const aspect = Math.min(w, h) / Math.max(w, h);
+    if (aspect < 0.85) score *= (aspect / 0.85) ** 2;
   }
+
+  // Углы: у квадрата линия доходит до углов рамки, у круга — нет
+  const corners = [[x, y], [x + w, y], [x, y + h], [x + w, y + h]];
+  const cornerGap = corners.reduce((s, c) => s + nearest(c, drawn), 0) / 4 / diag; // круг ≈ 0.15, квадрат ≈ 0
+  if (type === 'circle' && cornerGap < 0.1) score *= Math.max(0, cornerGap / 0.1) ** 0.7;
+  if (type === 'square' && cornerGap > 0.06) score *= Math.max(0, 1 - (cornerGap - 0.06) / 0.12);
+
   return Math.round(score);
 }
 
