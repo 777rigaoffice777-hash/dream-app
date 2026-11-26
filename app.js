@@ -628,7 +628,7 @@ function pictureGuess(board, win, item) {
 
 PICTURES.forEach(item => PUZZLES.push({
   level: 'pictures', title: 'Угадай картинку',
-  task: 'Что под плитками? Угадай побыстрее!',
+  task: '', // заголовок «Угадай картинку» уже всё объясняет — экономим место
   render: (board, win) => pictureGuess(board, win, item),
 }));
 
