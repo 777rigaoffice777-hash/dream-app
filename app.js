@@ -53,6 +53,7 @@ function makeGame(id, { pickColor, onTap }) {
       if (onTap(color)) {
         game.hits++;
         counter.textContent = game.hits;
+        sfx('pop');
         if (navigator.vibrate) navigator.vibrate(20);
       }
     });
@@ -99,6 +100,7 @@ const colorsGame = makeGame('colors', {
     if (!target) return false;            // задания ещё нет — просто лопаем
     if (color === target) return true;
     mistakes++;                           // не тот цвет!
+    sfx('wrong');
     mistakesBox.textContent = 'Ошибки: ' + mistakes;
     colorsArea.classList.remove('flash-bad'); void colorsArea.offsetWidth;
     colorsArea.classList.add('flash-bad');
@@ -611,6 +613,7 @@ function showPuzzle(i) {
     const praise = PRAISE[Math.floor(Math.random() * PRAISE.length)];
     pzMsg.textContent = '🎉 ' + praise + ' Головоломка решена!';
     pzMsg.className = 'win';
+    sfx('win');
     say(praise);
     if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
     if (!pzSolved.includes(pzIndex)) { pzSolved.push(pzIndex); localStorage.setItem('pzSolved', JSON.stringify(pzSolved)); }
@@ -818,6 +821,7 @@ function finishShape(timeUp) {
   shTotal += score;
   document.getElementById('shScore').textContent = 'Очки: ' + shTotal;
   say(praise);
+  if (score >= 55) sfx('win');
   if (navigator.vibrate) navigator.vibrate(score >= 70 ? [40, 40, 40] : 80);
 }
 
@@ -929,6 +933,139 @@ installBtn.onclick = async () => {
   deferredPrompt.prompt(); await deferredPrompt.userChoice;
   deferredPrompt = null; installBtn.hidden = true;
 };
+
+// ===== Музыка и звуки =====
+// Мелодии сочинены для этого приложения и играются синтезатором прямо в браузере —
+// никаких файлов скачивать не нужно. Ноты записаны номерами (60 = «до» первой октавы).
+// null — пауза. Хочешь свою мелодию — допиши ещё один трек в TRACKS.
+const TRACKS = {
+  // Весёлая быстрая — для игр на скорость
+  play: {
+    bpm: 132, wave: 'square',
+    melody: [ // 4 такта по 8 нот (восьмые)
+      72, 76, 79, 76, 74, 76, 72, null,
+      71, 74, 79, 74, 72, 74, 71, null,
+      72, 76, 81, 79, 76, 74, 72, null,
+      69, 72, 77, 76, 74, 72, 74, null,
+    ],
+    bass: [48, null, 55, null, 48, null, 55, null, 43, null, 50, null, 43, null, 50, null,
+           45, null, 52, null, 45, null, 52, null, 41, null, 48, null, 41, null, 48, null],
+    drums: true,
+  },
+  // Спокойная — чтобы думать и рисовать
+  calm: {
+    bpm: 84, wave: 'triangle',
+    melody: [
+      60, 64, 67, 72, 76, 72, 67, 64,
+      57, 60, 64, 69, 72, 69, 64, 60,
+      53, 57, 60, 65, 69, 65, 60, 57,
+      55, 59, 62, 67, 71, 67, 62, 59,
+    ],
+    bass: [48, null, null, null, null, null, null, null, 45, null, null, null, null, null, null, null,
+           41, null, null, null, null, null, null, null, 43, null, null, null, null, null, null, null],
+    drums: false,
+  },
+};
+// Какая музыка в каком режиме. null — без музыки (там говорит голос)
+const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: null, moroz: null };
+const MUSIC_VOLUME = 0.1;
+
+let musicOn = localStorage.getItem('musicOn') !== '0';
+let audioCtx = null, master = null, musicTrack = null, musicStep = 0, nextNoteTime = 0, currentScreen = 'dots';
+const noteHz = n => 440 * 2 ** ((n - 69) / 12);
+
+function ensureAudio() {
+  if (audioCtx) return audioCtx;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  master = audioCtx.createGain();
+  master.gain.value = MUSIC_VOLUME;
+  master.connect(audioCtx.destination);
+  return audioCtx;
+}
+
+function playTone(freq, start, dur, wave, vol, out) {
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = wave; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start);
+  g.gain.linearRampToValueAtTime(vol, start + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+  o.connect(g); g.connect(out);
+  o.start(start); o.stop(start + dur + 0.02);
+}
+
+function playDrum(start, accent) {
+  const len = accent ? 0.12 : 0.04;
+  const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * len, audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) ** 3;
+  const src = audioCtx.createBufferSource(), g = audioCtx.createGain();
+  src.buffer = buf; g.gain.value = accent ? 0.5 : 0.15;
+  src.connect(g); g.connect(master); src.start(start);
+  if (accent) playTone(110, start, 0.15, 'sine', 0.8, master); // «бум»
+}
+
+// Планировщик: заранее расставляет ноты на ближайшие 0.15 секунды
+setInterval(() => {
+  if (!audioCtx || !musicTrack || !musicOn) return;
+  const t = TRACKS[musicTrack], stepDur = 60 / t.bpm / 2;
+  // Пока приложение что-то говорит — музыка тише
+  const talking = 'speechSynthesis' in window && speechSynthesis.speaking;
+  master.gain.setTargetAtTime(talking ? MUSIC_VOLUME * 0.25 : MUSIC_VOLUME, audioCtx.currentTime, 0.1);
+  if (nextNoteTime < audioCtx.currentTime) nextNoteTime = audioCtx.currentTime + 0.05;
+  while (nextNoteTime < audioCtx.currentTime + 0.15) {
+    const i = musicStep % t.melody.length;
+    if (t.melody[i] != null) playTone(noteHz(t.melody[i]), nextNoteTime, stepDur * 0.9, t.wave, 0.35, master);
+    if (t.bass[i] != null) playTone(noteHz(t.bass[i]), nextNoteTime, t.drums ? stepDur * 1.8 : stepDur * 7, 'triangle', 0.6, master);
+    if (t.drums) playDrum(nextNoteTime, i % 4 === 0);
+    nextNoteTime += stepDur;
+    musicStep++;
+  }
+}, 25);
+
+function setMusicForScreen(screen) {
+  currentScreen = screen;
+  const track = musicOn ? MUSIC_FOR[screen] ?? null : null;
+  if (track !== musicTrack) { musicTrack = track; musicStep = 0; }
+}
+
+// Короткие звуки: pop — попал, wrong — ошибка, win — победа
+function sfx(kind) {
+  if (!musicOn) return;
+  ensureAudio();
+  const t = audioCtx.currentTime, out = audioCtx.destination;
+  if (kind === 'pop') playTone(600 + Math.random() * 500, t, 0.12, 'sine', 0.25, out);
+  if (kind === 'wrong') { playTone(220, t, 0.15, 'sawtooth', 0.12, out); playTone(160, t + 0.12, 0.2, 'sawtooth', 0.12, out); }
+  if (kind === 'win') [72, 76, 79, 84].forEach((n, k) => playTone(noteHz(n), t + k * 0.1, 0.25, 'triangle', 0.2, out));
+}
+
+const musicBtn = document.getElementById('musicBtn');
+function updateMusicBtn() {
+  musicBtn.textContent = musicOn ? '🎵' : '🔇';
+  musicBtn.classList.toggle('off', !musicOn);
+  musicBtn.setAttribute('aria-label', musicOn ? 'Выключить музыку' : 'Включить музыку');
+}
+musicBtn.onclick = () => {
+  musicOn = !musicOn;
+  localStorage.setItem('musicOn', musicOn ? '1' : '0');
+  if (musicOn) { ensureAudio(); audioCtx.resume(); }
+  setMusicForScreen(currentScreen);
+  updateMusicBtn();
+};
+updateMusicBtn();
+
+// Браузер разрешает звук только после первого касания — включаем музыку на первом нажатии
+document.addEventListener('pointerdown', () => {
+  if (!musicOn) return;
+  ensureAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}, { capture: true });
+// Свернули приложение — музыка на паузе
+document.addEventListener('visibilitychange', () => {
+  if (!audioCtx) return;
+  if (document.hidden) audioCtx.suspend(); else if (musicOn) audioCtx.resume();
+});
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => setMusicForScreen(b.dataset.screen)));
+setMusicForScreen('dots');
 
 // ===== Автообновление =====
 // Установленное приложение само проверяет, нет ли новой версии на сайте,
