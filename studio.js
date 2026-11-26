@@ -287,6 +287,15 @@ document.getElementById('stAuto').onclick = e => {
   e.currentTarget.classList.toggle('on', stage.controls.autoRotate);
 };
 document.getElementById('stFit').onclick = () => fitCamera(stage, objects);
+// Убрать всё: очищает сцену, но если ты правил продукт — сохранишь поверх него же
+document.getElementById('stClear').onclick = () => {
+  if (!objects.length) return showToast('На сцене и так пусто 🙂');
+  if (!confirm('Убрать все фигуры?')) return;
+  loadObjects([]);
+  saveDraft();
+  sfx('wrong');
+  showToast('🧹 Все фигуры убраны');
+};
 document.getElementById('stNew').onclick = () => {
   if (objects.length && !confirm('Начать новый объект? Несохранённое пропадёт.')) return;
   loadObjects([]); editingId = null; saveDraft();
