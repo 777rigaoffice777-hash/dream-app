@@ -61,7 +61,7 @@ nav button {
   display: flex; flex-direction: column; align-items: center; font-size: 1.2rem; padding: 10px 0;
   min-width: 0;
 }
-nav button span { font-size: .5rem; font-weight: 500; opacity: .7; white-space: nowrap; }
+nav button span { font-size: .45rem; font-weight: 500; opacity: .7; white-space: nowrap; }
 nav button.active span { opacity: 1; color: var(--accent); }
 /* ===== Игровые режимы: «Точки» и «Цвета» ===== */
 main { position: relative; }
@@ -272,3 +272,18 @@ code { background: var(--card); padding: 2px 6px; border-radius: 6px; }
   padding: 10px 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.4);
   white-space: nowrap; animation: bubblePop .35s ease;
 }
+
+/* ===== Режим «Фигуры» ===== */
+.shTop { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 8px; }
+.shLabel { font-size: .8rem; opacity: .8; }
+#shName { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+#shSample { width: 64px; height: 64px; background: var(--card); border-radius: 14px; }
+.shTimer { position: relative; height: 22px; background: var(--card); border-radius: 11px; overflow: hidden; margin-bottom: 8px; }
+#shBar { height: 100%; width: 100%; background: #7CFC9A; transition: width .1s linear; }
+#shTime { position: absolute; inset: 0; text-align: center; font-size: .7rem; font-weight: 800; line-height: 22px; color: #1b1440; }
+#shCanvas {
+  width: 100%; height: 42vh; display: block; background: #fff; border-radius: 16px; touch-action: none;
+}
+#shResult { text-align: center; font-weight: 700; font-size: .85rem; min-height: 2.6em; margin-top: 8px; }
+.shButtons { justify-content: center; align-items: center; margin-top: 4px; }
+#shScore { font-weight: 800; font-size: .8rem; opacity: .9; }

@@ -650,6 +650,179 @@ document.getElementById('pzNext').onclick = () => showPuzzle(pzIndex + 1);
 document.getElementById('pzRetry').onclick = () => showPuzzle(pzIndex);
 showPuzzle(0);
 
+// ===== Режим 5: Нарисуй фигуру за 15 секунд =====
+// Игра называет фигуру, ты рисуешь её пальцем. Потом рисунок сравнивается
+// с идеальной фигурой того же размера, и получается точность в процентах.
+const SHAPES = {
+  circle:   { name: 'Круг',        equalSides: true },
+  square:   { name: 'Квадрат',     equalSides: true },
+  triangle: { name: 'Треугольник', equalSides: false },
+  rhombus:  { name: 'Ромб',        equalSides: false },
+  star:     { name: 'Звезда',      equalSides: false },
+};
+const SHAPE_TIME = 15; // секунд на рисунок
+
+// Точки идеальной фигуры, вписанной в прямоугольник (x, y, w, h)
+function shapeOutline(type, x, y, w, h, n = 160) {
+  const cx = x + w / 2, cy = y + h / 2;
+  if (type === 'circle') {
+    return [...Array(n)].map((_, i) => {
+      const a = (i / n) * Math.PI * 2;
+      return [cx + Math.cos(a) * w / 2, cy + Math.sin(a) * h / 2];
+    });
+  }
+  let v;
+  if (type === 'square') v = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+  if (type === 'rhombus') v = [[cx, y], [x + w, cy], [cx, y + h], [x, cy]];
+  if (type === 'triangle') v = [[cx, y], [x + w, y + h], [x, y + h]];
+  if (type === 'star') {
+    // 5 лучей: внешние и внутренние вершины по очереди, потом вписываем в прямоугольник
+    const raw = [...Array(10)].map((_, k) => {
+      const a = (-90 + k * 36) * Math.PI / 180, r = k % 2 ? 0.382 : 1;
+      return [Math.cos(a) * r, Math.sin(a) * r];
+    });
+    const minX = Math.min(...raw.map(p => p[0])), maxX = Math.max(...raw.map(p => p[0]));
+    const minY = Math.min(...raw.map(p => p[1])), maxY = Math.max(...raw.map(p => p[1]));
+    v = raw.map(([px, py]) => [x + (px - minX) / (maxX - minX) * w, y + (py - minY) / (maxY - minY) * h]);
+  }
+  // Равномерно расставляем точки по периметру многоугольника
+  const edges = v.map((p, i) => [p, v[(i + 1) % v.length]]);
+  const lens = edges.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]));
+  const total = lens.reduce((s, l) => s + l, 0);
+  const pts = [];
+  edges.forEach(([a, b], i) => {
+    const k = Math.max(1, Math.round(n * lens[i] / total));
+    for (let j = 0; j < k; j++) pts.push([a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k]);
+  });
+  return pts;
+}
+
+// Насколько рисунок похож на фигуру: 0…100
+function shapeScore(type, drawn) {
+  const xs = drawn.map(p => p[0]), ys = drawn.map(p => p[1]);
+  const x = Math.min(...xs), y = Math.min(...ys), w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const diag = Math.hypot(w, h);
+  if (diag < 30) return 0; // слишком маленький рисунок
+  const ideal = shapeOutline(type, x, y, w, h);
+  const nearest = (p, set) => Math.min(...set.map(q => Math.hypot(p[0] - q[0], p[1] - q[1])));
+  const d1 = drawn.reduce((s, p) => s + nearest(p, ideal), 0) / drawn.length;   // рисунок рядом с фигурой?
+  const d2 = ideal.reduce((s, p) => s + nearest(p, drawn), 0) / ideal.length;   // вся фигура нарисована?
+  let score = Math.max(0, 1 - ((d1 + d2) / 2 / diag) / 0.09) * 100;
+  if (SHAPES[type].equalSides) {
+    const aspect = Math.min(w, h) / Math.max(w, h);   // у круга и квадрата ширина ≈ высоте
+    if (aspect < 0.8) score *= aspect / 0.8;
+  }
+  return Math.round(score);
+}
+
+const shCanvas = document.getElementById('shCanvas');
+const shCtx = shCanvas.getContext('2d');
+const shSample = document.getElementById('shSample');
+const shResult = document.getElementById('shResult');
+const shStartBtn = document.getElementById('shStart');
+const shDoneBtn = document.getElementById('shDone');
+let shTarget = null, shPoints = [], shDrawing = false, shPlaying = false, shTimer = null, shLeft = 0, shTotal = 0, shLast = null;
+
+function sizeShapeCanvas() {
+  const r = shCanvas.getBoundingClientRect();
+  shCanvas.width = r.width; shCanvas.height = r.height;
+}
+
+function drawOutline(ctx, type, x, y, w, h, style) {
+  const pts = shapeOutline(type, x, y, w, h);
+  ctx.save();
+  Object.assign(ctx, style);
+  ctx.beginPath();
+  pts.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py));
+  ctx.closePath(); ctx.stroke();
+  ctx.restore();
+}
+
+function newShapeRound() {
+  const keys = Object.keys(SHAPES).filter(k => k !== shLast);
+  shTarget = keys[Math.floor(Math.random() * keys.length)];
+  shLast = shTarget;
+  document.getElementById('shName').textContent = SHAPES[shTarget].name.toUpperCase();
+  const sctx = shSample.getContext('2d');
+  sctx.clearRect(0, 0, 120, 120);
+  drawOutline(sctx, shTarget, 15, 15, 90, 90, { strokeStyle: '#ffb703', lineWidth: 7, lineJoin: 'round' });
+  sizeShapeCanvas();
+  shCtx.clearRect(0, 0, shCanvas.width, shCanvas.height);
+  shPoints = [];
+  shPlaying = true;
+  shLeft = SHAPE_TIME;
+  shResult.textContent = 'Рисуй! ✏️';
+  shStartBtn.hidden = true; shDoneBtn.hidden = false;
+  say('Нарисуй ' + SHAPES[shTarget].name.toLowerCase());
+  updateShapeTimer();
+  clearInterval(shTimer);
+  shTimer = setInterval(() => {
+    if (!document.getElementById('shapes').classList.contains('active')) return; // на паузе, если ушли
+    shLeft -= 0.1;
+    updateShapeTimer();
+    if (shLeft <= 0) finishShape(true);
+  }, 100);
+}
+
+function updateShapeTimer() {
+  document.getElementById('shTime').textContent = Math.max(0, Math.ceil(shLeft));
+  const bar = document.getElementById('shBar');
+  bar.style.width = Math.max(0, shLeft / SHAPE_TIME * 100) + '%';
+  bar.style.background = shLeft > 5 ? '#7CFC9A' : '#ff595e';
+}
+
+function finishShape(timeUp) {
+  if (!shPlaying) return;
+  shPlaying = false; shDrawing = false;
+  clearInterval(shTimer);
+  shStartBtn.hidden = false; shStartBtn.textContent = '▶ Следующая фигура';
+  shDoneBtn.hidden = true;
+  if (shPoints.length < 10) {
+    shResult.textContent = timeUp ? '⏰ Время вышло! Ты ничего не нарисовал.' : 'Сначала нарисуй фигуру 🙂';
+    return;
+  }
+  // Сравниваем со всеми фигурами: вдруг получилась другая
+  const scores = Object.fromEntries(Object.keys(SHAPES).map(k => [k, shapeScore(k, shPoints)]));
+  const score = scores[shTarget];
+  const best = Object.keys(scores).reduce((a, b) => scores[a] >= scores[b] ? a : b);
+  // Показываем идеальную фигуру зелёным пунктиром поверх рисунка
+  const xs = shPoints.map(p => p[0]), ys = shPoints.map(p => p[1]);
+  const x = Math.min(...xs), y = Math.min(...ys);
+  shCtx.setLineDash([10, 8]);
+  drawOutline(shCtx, shTarget, x, y, Math.max(...xs) - x, Math.max(...ys) - y, { strokeStyle: '#2ecc40', lineWidth: 4, lineJoin: 'round' });
+  shCtx.setLineDash([]);
+
+  const stars = score >= 85 ? '⭐⭐⭐' : score >= 70 ? '⭐⭐' : score >= 55 ? '⭐' : '';
+  const praise = score >= 85 ? 'Великолепно!' : score >= 70 ? 'Отлично!' : score >= 55 ? 'Хорошо!' : 'Попробуй ещё раз!';
+  let text = `${praise} Точность ${score}% ${stars}`;
+  if (best !== shTarget && scores[best] - score > 10) text += ` · Похоже больше на: ${SHAPES[best].name.toLowerCase()}`;
+  if (timeUp) text = '⏰ ' + text;
+  shResult.textContent = text;
+  shTotal += score;
+  document.getElementById('shScore').textContent = 'Очки: ' + shTotal;
+  say(praise);
+  if (navigator.vibrate) navigator.vibrate(score >= 70 ? [40, 40, 40] : 80);
+}
+
+function shPos(e) { const r = shCanvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+shCanvas.addEventListener('pointerdown', e => {
+  if (!shPlaying) return;
+  e.preventDefault();
+  shDrawing = true;
+  const p = shPos(e); shPoints.push(p);
+  shCtx.beginPath(); shCtx.moveTo(...p);
+});
+shCanvas.addEventListener('pointermove', e => {
+  if (!shDrawing) return;
+  const p = shPos(e); shPoints.push(p);
+  shCtx.lineTo(...p);
+  shCtx.strokeStyle = '#1b1440'; shCtx.lineWidth = 6; shCtx.lineCap = 'round'; shCtx.lineJoin = 'round';
+  shCtx.stroke();
+});
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => shCanvas.addEventListener(ev, () => shDrawing = false));
+shStartBtn.onclick = newShapeRound;
+shDoneBtn.onclick = () => finishShape(false);
+
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');
 let ideas = JSON.parse(localStorage.getItem('ideas') || '[]');

@@ -7,11 +7,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
-  <meta name="app-version" content="22">
+  <meta name="app-version" content="23">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=22">
+  <link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
   <header>
@@ -136,6 +136,25 @@
       </div>
     </section>
 
+    <!-- Режим 5: Нарисуй фигуру за 15 секунд -->
+    <section id="shapes" class="screen">
+      <div class="shTop">
+        <div>
+          <div class="shLabel">Нарисуй:</div>
+          <div id="shName">—</div>
+        </div>
+        <canvas id="shSample" width="120" height="120"></canvas>
+      </div>
+      <div class="shTimer"><div id="shBar"></div><span id="shTime">15</span></div>
+      <canvas id="shCanvas"></canvas>
+      <div id="shResult">Нажми «Старт» и рисуй пальцем!</div>
+      <div class="row shButtons">
+        <button id="shStart">▶ Старт</button>
+        <button id="shDone" hidden>✓ Готово</button>
+        <span id="shScore">Очки: 0</span>
+      </div>
+    </section>
+
     <!-- Экран: Идеи -->
     <section id="ideas" class="screen">
       <h2>Мои идеи</h2>
@@ -172,11 +191,12 @@
     <button data-screen="colors">🌈<span>Цвета</span></button>
     <button data-screen="moroz">🎅<span>Мороз</span></button>
     <button data-screen="puzzles">🧩<span>Пазлы</span></button>
+    <button data-screen="shapes">📐<span>Фигуры</span></button>
     <button data-screen="ideas">💡<span>Идеи</span></button>
     <button data-screen="draw">🎨<span>Рисовать</span></button>
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>
