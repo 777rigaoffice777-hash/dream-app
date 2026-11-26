@@ -769,9 +769,13 @@ function newShapeRound() {
   say('Нарисуй ' + SHAPES[shTarget].name.toLowerCase());
   updateShapeTimer();
   clearInterval(shTimer);
+  // Считаем по настоящим часам: даже если телефон притормаживает таймеры, 15 секунд будут честными
+  let lastTick = Date.now();
   shTimer = setInterval(() => {
-    if (!document.getElementById('shapes').classList.contains('active')) return; // на паузе, если ушли
-    shLeft -= 0.1;
+    const now = Date.now(), dt = (now - lastTick) / 1000;
+    lastTick = now;
+    if (!document.getElementById('shapes').classList.contains('active') || document.hidden) return; // пауза, если ушли
+    shLeft -= dt;
     updateShapeTimer();
     if (shLeft <= 0) finishShape(true);
   }, 100);
