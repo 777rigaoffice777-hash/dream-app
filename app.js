@@ -995,7 +995,7 @@ function generatedStep(t, step) {
   return { mel, bass };
 }
 
-const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null };
+const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null, studio: 'calm', products: 'calm' };
 const MUSIC_VOLUME = 0.1;
 
 let musicOn = localStorage.getItem('musicOn') !== '0';

@@ -300,3 +300,60 @@ code { background: var(--card); padding: 2px 6px; border-radius: 6px; }
   width: 2.2em; height: 2.2em; padding: 0; border-radius: 50%; font-size: .9rem;
 }
 html, body { overflow-x: hidden; }
+
+/* ===== Нижнее меню листается, когда вкладок много ===== */
+nav { overflow-x: auto; scrollbar-width: none; }
+nav::-webkit-scrollbar { display: none; }
+nav button { flex: 1 0 auto; min-width: 54px; }
+
+/* ===== 3D-мастерская ===== */
+#studio.active { position: absolute; inset: 0; display: flex; flex-direction: column; background: #dfe9ff; }
+.stShapes { display: flex; gap: 6px; overflow-x: auto; padding: 8px; background: var(--card); scrollbar-width: none; flex-shrink: 0; }
+.stShapes::-webkit-scrollbar { display: none; }
+.stShapes button {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: #3a3180; color: var(--text); font-size: .5rem; padding: 6px 10px; border-radius: 12px;
+}
+.stShapes button span { font-size: 1.1rem; }
+.stView { position: relative; flex: 1; min-height: 0; touch-action: none; }
+.stView canvas { width: 100% !important; height: 100% !important; display: block; }
+.stTopBtns { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 2; }
+.stTopBtns button { width: 2.2em; height: 2.2em; padding: 0; border-radius: 50%; background: rgba(255,255,255,.9); font-size: .9rem; }
+.stTopBtns button.on { background: var(--accent); }
+.stHint {
+  position: absolute; left: 8px; bottom: 8px; right: 8px; text-align: center; pointer-events: none;
+  font-size: .55rem; color: #1b1440; background: rgba(255,255,255,.75); border-radius: 10px; padding: 4px 8px;
+}
+.stPanel { background: var(--card); padding: 8px 10px 10px; flex-shrink: 0; }
+.stTabs { display: flex; gap: 4px; margin-bottom: 8px; }
+.stTabs button { flex: 1; font-size: .55rem; padding: 6px 4px; background: #3a3180; color: var(--text); }
+.stTabs button.active { background: var(--accent); color: #1b1440; }
+.stTabs #stCopy, .stTabs #stDel { flex: 0 0 2.4em; font-size: .8rem; }
+.stColors { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.stColors button { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 3px solid transparent; }
+.stColors button.sel { border-color: #fff; transform: scale(1.15); }
+.stFinish { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+.stFinish button { font-size: .6rem; padding: 6px 12px; background: #3a3180; color: var(--text); }
+.stFinish button.sel { background: var(--accent); color: #1b1440; }
+.stTab label { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .6rem; margin: 4px 0; }
+.stTab input[type=range] { flex: 1; max-width: 60%; accent-color: var(--accent); }
+.stModal { position: absolute; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.stModal[hidden] { display: none; }
+.stModalBox { background: var(--card); padding: 18px; border-radius: 18px; width: 85%; text-align: center; }
+.stModalBox input { width: 100%; font: inherit; padding: 10px; border-radius: 12px; border: 0; margin: 12px 0; }
+.stModalBox .row { justify-content: center; }
+
+/* ===== Продукты ===== */
+#prGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.prCard { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: #fff; color: #1b1440; border-radius: 16px; }
+.prCard img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #dfe9ff; }
+.prCard span { font-size: .65rem; padding: 6px 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prEmpty { grid-column: span 2; text-align: center; opacity: .8; margin-top: 30px; }
+#prViewer { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; z-index: 50; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+#prViewer[hidden] { display: none; }
+.prViewTop { display: flex; align-items: center; gap: 10px; padding: 10px; }
+.prViewTop button { width: 2.2em; height: 2.2em; padding: 0; border-radius: 50%; }
+#prName { font-weight: 800; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#prView { flex: 1; min-height: 0; position: relative; touch-action: none; }
+#prView canvas { width: 100% !important; height: 100% !important; display: block; }
+.prButtons { justify-content: center; padding: 10px; }
