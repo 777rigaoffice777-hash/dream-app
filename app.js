@@ -1,4 +1,4 @@
-/* build 40 */
+/* build 41 */
 // ===== Переключение экранов =====
 document.querySelectorAll('nav button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -845,6 +845,101 @@ shCanvas.addEventListener('pointermove', e => {
 shStartBtn.onclick = newShapeRound;
 shDoneBtn.onclick = () => finishShape(false);
 
+// ===== Генератор случайных чисел: от 0 до бесконечности =====
+// Числа хранятся как BigInt — так можно работать с числами хоть из тысячи цифр без ошибок.
+const NB_MAX_DIGITS = 1000;       // сколько цифр можно ввести в «От» и «До»
+const NB_INF_CONTINUE = 0.85;     // ∞: с такой вероятностью к числу добавляется ещё одна цифра
+const nbOut = document.getElementById('nbOut');
+const nbInfo = document.getElementById('nbInfo');
+const nbMin = document.getElementById('nbMin'), nbMax = document.getElementById('nbMax'), nbInf = document.getElementById('nbInf');
+let nbHistory = JSON.parse(localStorage.getItem('nbHistory') || '[]');
+
+// Только цифры, без лишних нулей впереди
+const digitsOnly = s => (s.replace(/\D/g, '').slice(0, NB_MAX_DIGITS).replace(/^0+(?=\d)/, '')) || '0';
+[nbMin, nbMax].forEach(inp => inp.addEventListener('input', () => {
+  const clean = digitsOnly(inp.value);
+  if (inp.value !== clean && inp.value !== '') inp.value = clean;
+}));
+nbInf.onchange = () => document.getElementById('nbRange').classList.toggle('off', nbInf.checked);
+document.querySelectorAll('.nbPresets button').forEach(b => b.onclick = () => {
+  nbMin.value = '0'; nbMax.value = b.dataset.max; nbInf.checked = false; nbInf.onchange();
+});
+
+// Честное случайное число от min до max включительно (криптографический генератор телефона)
+function randomBigInt(min, max) {
+  const range = max - min + 1n;
+  const bits = range.toString(2).length;
+  const bytes = Math.ceil(bits / 8);
+  const mask = (1n << BigInt(bits)) - 1n;
+  for (;;) {
+    let x = 0n;
+    crypto.getRandomValues(new Uint8Array(bytes)).forEach(b => { x = (x << 8n) | BigInt(b); });
+    x &= mask;
+    if (x < range) return min + x; // лишнее отбрасываем — так все числа одинаково вероятны
+  }
+}
+// ∞: у числа нет предела — длина растёт, пока «монетка» говорит «ещё цифру»
+function randomInfinite() {
+  let len = 1;
+  while (Math.random() < NB_INF_CONTINUE && len < 100000) len++;
+  if (len === 1) return BigInt(Math.floor(Math.random() * 10));
+  let s = String(1 + Math.floor(Math.random() * 9));
+  const rest = crypto.getRandomValues(new Uint8Array(len - 1));
+  rest.forEach(b => { s += b % 10; });
+  return BigInt(s);
+}
+// 1234567 → «1 234 567»
+const groupDigits = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+function nbRender(n) {
+  const s = n.toString();
+  nbOut.textContent = groupDigits(n);
+  nbOut.className = 'nbOut' + (s.length > 30 ? ' huge' : s.length > 12 ? ' long' : '');
+  nbInfo.textContent = s.length > 3 ? `цифр в числе: ${s.length}` : '';
+}
+
+document.getElementById('nbGo').onclick = () => {
+  let result;
+  if (nbInf.checked) result = randomInfinite();
+  else {
+    let lo = BigInt(digitsOnly(nbMin.value)), hi = BigInt(digitsOnly(nbMax.value));
+    if (lo > hi) [lo, hi] = [hi, lo];       // перепутали «От» и «До» — не беда
+    nbMin.value = lo; nbMax.value = hi;
+    result = randomBigInt(lo, hi);
+  }
+  // Красиво «крутим» цифры, потом показываем ответ
+  const btn = document.getElementById('nbGo');
+  btn.disabled = true;
+  const len = Math.min(result.toString().length, 40);
+  let spins = 0;
+  const t = setInterval(() => {
+    nbOut.textContent = groupDigits(randomBigInt(0n, 10n ** BigInt(len) - 1n));
+    nbOut.className = 'nbOut spinning' + (len > 30 ? ' huge' : len > 12 ? ' long' : '');
+    sfx('pop');
+    if (++spins >= 10) {
+      clearInterval(t);
+      nbRender(result);
+      btn.disabled = false;
+      sfx('win');
+      if (result.toString().length <= 12) say(result.toString());
+      nbHistory.unshift(result.toString());
+      nbHistory = nbHistory.slice(0, 10);
+      localStorage.setItem('nbHistory', JSON.stringify(nbHistory));
+      nbDrawHistory();
+    }
+  }, 60);
+};
+function nbDrawHistory() {
+  const ol = document.getElementById('nbHist');
+  ol.innerHTML = '';
+  nbHistory.forEach(s => {
+    const li = document.createElement('li');
+    li.textContent = s.length > 40 ? groupDigits(BigInt(s.slice(0, 24))) + '… (' + s.length + ' цифр)' : groupDigits(BigInt(s));
+    ol.appendChild(li);
+  });
+}
+nbDrawHistory();
+
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');
 let ideas = JSON.parse(localStorage.getItem('ideas') || '[]');
@@ -996,7 +1091,7 @@ function generatedStep(t, step) {
   return { mel, bass };
 }
 
-const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null, studio: 'calm', products: 'calm' };
+const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null, studio: 'calm', products: 'calm', numbers: 'calm' };
 const MUSIC_VOLUME = 0.1;
 
 let musicOn = localStorage.getItem('musicOn') !== '0';

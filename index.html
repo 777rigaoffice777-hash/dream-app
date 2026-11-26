@@ -7,11 +7,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
-  <meta name="app-version" content="40">
+  <meta name="app-version" content="41">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=40">
+  <link rel="stylesheet" href="style.css?v=41">
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
   </script>
@@ -242,6 +242,27 @@
       </div>
     </section>
 
+    <!-- Генератор случайных чисел -->
+    <section id="numbers" class="screen">
+      <h2>🎲 Генератор чисел</h2>
+      <div class="nbRange" id="nbRange">
+        <label>От<input id="nbMin" inputmode="numeric" value="0" autocomplete="off"></label>
+        <label>До<input id="nbMax" inputmode="numeric" value="100" autocomplete="off"></label>
+      </div>
+      <label class="nbInf"><input type="checkbox" id="nbInf"> ∞ Без предела (до бесконечности)</label>
+      <div class="nbPresets">
+        <button data-max="10">0–10</button>
+        <button data-max="100">0–100</button>
+        <button data-max="1000">0–1000</button>
+        <button data-max="1000000">0–1 000 000</button>
+      </div>
+      <div class="nbOut" id="nbOut">?</div>
+      <div class="nbInfo" id="nbInfo"></div>
+      <button id="nbGo" class="big">🎲 Сгенерировать</button>
+      <div class="nbHistTitle">История</div>
+      <ol id="nbHist"></ol>
+    </section>
+
     <!-- Экран: Идеи -->
     <section id="ideas" class="screen">
       <h2>Мои идеи</h2>
@@ -281,12 +302,13 @@
     <button data-screen="shapes">📐<span>Фигуры</span></button>
     <button data-screen="studio">🧊<span>3D</span></button>
     <button data-screen="products">📦<span>Продукты</span></button>
+    <button data-screen="numbers">🎲<span>Числа</span></button>
     <button data-screen="ideas">💡<span>Идеи</span></button>
     <button data-screen="draw">🎨<span>Рисовать</span></button>
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=40"></script>
-  <script type="module" src="studio.js?v=40"></script>
+  <script src="app.js?v=41"></script>
+  <script type="module" src="studio.js?v=41"></script>
 </body>
 </html>

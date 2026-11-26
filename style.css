@@ -401,3 +401,28 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 .stMergeBar button { font-size: .6rem; padding: 6px 10px; }
 .stMergeBar button:disabled { opacity: .45; }
 #stMergeCancel { background: rgba(255,255,255,.9); }
+
+/* ===== Генератор чисел ===== */
+#numbers h2 { text-align: center; }
+.nbRange { display: flex; gap: 10px; }
+.nbRange label { flex: 1; display: flex; flex-direction: column; font-size: .7rem; opacity: .9; gap: 4px; }
+.nbRange input { font: inherit; font-size: 1rem; padding: 10px; border-radius: 12px; border: 0; background: var(--card); color: var(--text); width: 100%; }
+.nbRange.off { opacity: .35; pointer-events: none; }
+.nbInf { display: flex; align-items: center; gap: 8px; font-size: .75rem; margin: 10px 0; }
+.nbInf input { width: 22px; height: 22px; accent-color: var(--accent); }
+.nbPresets { display: flex; flex-wrap: wrap; gap: 6px; }
+.nbPresets button { font-size: .6rem; padding: 6px 10px; background: var(--card); color: var(--text); }
+.nbOut {
+  margin: 16px 0 4px; min-height: 2.2em; padding: 12px; border-radius: 18px;
+  background: #fff; color: #1b1440; text-align: center; font-weight: 800;
+  font-size: 2.6rem; line-height: 1.15; word-break: break-all; font-variant-numeric: tabular-nums;
+}
+.nbOut.long { font-size: 1.4rem; }
+.nbOut.huge { font-size: .85rem; text-align: left; max-height: 40vh; overflow-y: auto; }
+.nbOut.spinning { color: #8a8a8a; }
+.nbInfo { text-align: center; font-size: .6rem; opacity: .75; min-height: 1.2em; margin-bottom: 8px; }
+#nbGo { width: 100%; }
+#nbGo:disabled { opacity: .6; }
+.nbHistTitle { margin-top: 16px; font-size: .7rem; opacity: .7; }
+#nbHist { margin: 4px 0 0; padding-left: 1.6em; font-size: .7rem; word-break: break-all; }
+#nbHist li { margin: 3px 0; }
