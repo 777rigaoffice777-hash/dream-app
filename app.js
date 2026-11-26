@@ -1,4 +1,4 @@
-/* build 42 */
+/* build 43 */
 // ===== Переключение экранов =====
 document.querySelectorAll('nav button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1351,6 +1351,43 @@ function setMusicForScreen(screen) {
   const track = musicOn ? MUSIC_FOR[screen] ?? null : null;
   if (track !== musicTrack) { musicTrack = track; musicStep = 0; }
 }
+
+// ===== Звук у КАЖДОЙ кнопки — и у тех, что появятся потом =====
+// Один обработчик на всё приложение: ловит нажатие на любую кнопку, даже созданную позже.
+// Свой звук для кнопки: <button data-sound="bell">  — любое имя из SOUND_FX (boom, bell, laser,
+// whoosh, clap, boing) или click / tab. Без звука: data-sound="none".
+// Эти кнопки уже звучат сами — им второй звук не нужен:
+const OWN_SOUND = '.dot, .sbBtn, #morozBtn, [data-sound="none"]';
+const TAB_NOTES = [72, 74, 76, 79, 81, 84, 86, 88, 91, 93, 96, 98]; // вкладки — ноты по порядку
+const UI_SOUNDS = {
+  click(ctx, t, out) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(1100, t); o.frequency.exponentialRampToValueAtTime(650, t + 0.06);
+    g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    o.connect(g).connect(out); o.start(t); o.stop(t + 0.1);
+  },
+  tab(ctx, t, out, btn) {
+    const i = [...btn.parentNode.children].indexOf(btn);
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.value = noteHz(TAB_NOTES[i % TAB_NOTES.length]);
+    g.gain.setValueAtTime(0.22, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    o.connect(g).connect(out); o.start(t); o.stop(t + 0.2);
+  },
+};
+function buttonSound(btn) {
+  if (!musicOn) return;                       // 🎵 выключена — все звуки выключены
+  const ctx = ensureAudio();
+  if (ctx.state === 'suspended') ctx.resume();
+  const name = btn.dataset.sound || (btn.closest('nav') ? 'tab' : 'click');
+  const play = UI_SOUNDS[name] || SOUND_FX[name] || UI_SOUNDS.click;
+  play(ctx, ctx.currentTime + 0.005, ctx.destination, btn);
+}
+document.addEventListener('pointerdown', e => {
+  const btn = e.target.closest('button, [role="button"], input[type="checkbox"]');
+  if (!btn || btn.disabled || btn.matches(OWN_SOUND) || btn.closest(OWN_SOUND)) return;
+  buttonSound(btn);
+}, { capture: true });
 
 // Короткие звуки: pop — попал, wrong — ошибка, win — победа
 function sfx(kind) {
