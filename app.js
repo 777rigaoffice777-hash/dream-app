@@ -1,4 +1,4 @@
-/* build 39 */
+/* build 40 */
 // ===== Переключение экранов =====
 document.querySelectorAll('nav button').forEach(btn => {
   btn.addEventListener('click', () => {

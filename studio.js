@@ -1,4 +1,4 @@
-/* build 39 */
+/* build 40 */
 // ===== 3D-мастерская и вкладка «Продукты» =====
 // Объект собирается из фигур. Каждую фигуру можно двигать пальцем, красить,
 // менять размер и поворачивать. Готовый объект сохраняется в «Продукты».
@@ -359,6 +359,7 @@ function updateHandles() {
     const dir = ax.dir.clone().applyQuaternion(q).normalize();
     h.position.copy(p.applyMatrix4(selected.matrixWorld)).addScaledVector(dir, 0.04);
     h.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    h.updateMatrixWorld(true); // чтобы стрелку можно было сразу поймать пальцем
   });
 }
 function toScreen(v) {
