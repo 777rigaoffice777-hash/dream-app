@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
   <header>
@@ -120,6 +120,20 @@
       </button>
     </section>
 
+    <!-- Режим 4: Головоломки -->
+    <section id="puzzles" class="screen">
+      <div id="pzLevels"></div>
+      <h2 id="pzTitle"></h2>
+      <p id="pzTask"></p>
+      <div id="pzBoard"></div>
+      <div id="pzMsg"></div>
+      <div class="row pzNav">
+        <button id="pzPrev">←</button>
+        <button id="pzRetry">↺ Заново</button>
+        <button id="pzNext">Дальше →</button>
+      </div>
+    </section>
+
     <!-- Экран: Идеи -->
     <section id="ideas" class="screen">
       <h2>Мои идеи</h2>
@@ -154,11 +168,12 @@
     <button data-screen="dots" class="active">🔴<span>Точки</span></button>
     <button data-screen="colors">🌈<span>Цвета</span></button>
     <button data-screen="moroz">🎅<span>Мороз</span></button>
+    <button data-screen="puzzles">🧩<span>Пазлы</span></button>
     <button data-screen="ideas">💡<span>Идеи</span></button>
     <button data-screen="draw">🎨<span>Рисовать</span></button>
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

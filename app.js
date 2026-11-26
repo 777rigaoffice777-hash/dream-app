@@ -252,6 +252,159 @@ morozBtn.addEventListener('click', e => {
   }
 })();
 
+// ===== Режим 4: Головоломки (лёгкий уровень) =====
+// Каждая головоломка — это { title, task, render(board, win) }.
+// render рисует головоломку в board и вызывает win(), когда она решена.
+// Хочешь добавить свою — допиши ещё один объект в PUZZLES.
+const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+
+function choicePuzzle(board, options, correct, win) {
+  shuffle(options).forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'pzItem' + (opt.length > 2 ? ' text' : '');
+    b.textContent = opt;
+    b.onclick = () => {
+      if (opt === correct) { b.classList.add('good'); win(); }
+      else { b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); if (navigator.vibrate) navigator.vibrate(80); }
+    };
+    board.appendChild(b);
+  });
+}
+
+const PUZZLES = [
+  {
+    title: '1. Найди лишнее',
+    task: 'Что здесь не фрукт? Нажми на лишнее.',
+    render: (board, win) => choicePuzzle(board, ['🍎', '🍌', '🍇', '🚗', '🍐'], '🚗', win),
+  },
+  {
+    title: '2. Продолжи ряд',
+    task: 'Какой кружок будет следующим?',
+    render: (board, win) => {
+      board.insertAdjacentHTML('beforeend', '<div class="pzSeq">🔴🔵🔴🔵🔴❓</div>');
+      choicePuzzle(board, ['🔴', '🔵', '🟢'], '🔵', win);
+    },
+  },
+  {
+    title: '3. Загадка',
+    task: 'Отгадай, о чём это.',
+    render: (board, win) => {
+      board.insertAdjacentHTML('beforeend', '<div class="pzRiddle">«Зимой и летом —<br>одним цветом»</div>');
+      choicePuzzle(board, ['🎄 Ёлка', '⛄ Снеговик', '☀️ Солнце'], '🎄 Ёлка', win);
+    },
+  },
+  {
+    title: '4. Пятнашки',
+    task: 'Расставь числа по порядку от 1 до 8. Нажимай на плитку рядом с пустым местом.',
+    render: (board, win) => {
+      const grid = document.createElement('div');
+      grid.className = 'pz15';
+      board.appendChild(grid);
+      let tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0]; // 0 — пустое место
+      const neighbors = i => [i - 3, i + 3, i % 3 ? i - 1 : -1, i % 3 < 2 ? i + 1 : -1].filter(n => n >= 0 && n < 9);
+      // Лёгкий уровень: перемешиваем всего несколько ходов от собранного
+      let prev = -1;
+      for (let k = 0; k < 6 || tiles.join() === '1,2,3,4,5,6,7,8,0'; k++) {
+        const e = tiles.indexOf(0);
+        const opts = neighbors(e).filter(n => n !== prev);
+        const n = opts[Math.floor(Math.random() * opts.length)];
+        [tiles[e], tiles[n]] = [tiles[n], tiles[e]];
+        prev = e;
+      }
+      const draw = () => {
+        grid.innerHTML = '';
+        tiles.forEach((t, i) => {
+          const b = document.createElement('button');
+          b.textContent = t || '';
+          if (!t) b.className = 'empty';
+          b.onclick = () => {
+            const e = tiles.indexOf(0);
+            if (!neighbors(e).includes(i) || grid.dataset.done) return;
+            [tiles[e], tiles[i]] = [tiles[i], tiles[e]];
+            draw();
+            if (tiles.join() === '1,2,3,4,5,6,7,8,0') { grid.dataset.done = 1; win(); }
+          };
+          grid.appendChild(b);
+        });
+      };
+      draw();
+    },
+  },
+  {
+    title: '5. Найди пары',
+    task: 'Открывай по две карточки и найди одинаковые.',
+    render: (board, win) => {
+      const grid = document.createElement('div');
+      grid.className = 'pzMemory';
+      board.appendChild(grid);
+      let open = [], found = 0, busy = false;
+      shuffle(['🎅', '🎅', '🎄', '🎄', '⭐', '⭐']).forEach(emoji => {
+        const b = document.createElement('button');
+        b.textContent = emoji;
+        b.onclick = () => {
+          if (busy || b.classList.contains('open') || b.classList.contains('matched')) return;
+          b.classList.add('open');
+          open.push(b);
+          if (open.length < 2) return;
+          const [a, c] = open; open = [];
+          if (a.textContent === c.textContent) {
+            a.classList.replace('open', 'matched'); c.classList.replace('open', 'matched');
+            if (++found === 3) win();
+          } else {
+            busy = true;
+            setTimeout(() => { a.classList.remove('open'); c.classList.remove('open'); busy = false; }, 800);
+          }
+        };
+        grid.appendChild(b);
+      });
+    },
+  },
+];
+
+let pzIndex = 0;
+let pzSolved = JSON.parse(localStorage.getItem('pzSolved') || '[]');
+const pzBoard = document.getElementById('pzBoard');
+const pzMsg = document.getElementById('pzMsg');
+const PRAISE = ['Молодец!', 'Отлично!', 'Супер!', 'Ты гений!', 'Здорово!'];
+
+function showPuzzle(i) {
+  pzIndex = (i + PUZZLES.length) % PUZZLES.length;
+  const p = PUZZLES[pzIndex];
+  document.getElementById('pzTitle').textContent = p.title;
+  document.getElementById('pzTask').textContent = p.task;
+  pzMsg.textContent = ''; pzMsg.className = '';
+  pzBoard.innerHTML = '';
+  p.render(pzBoard, () => {
+    const praise = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+    pzMsg.textContent = '🎉 ' + praise + ' Головоломка решена!';
+    pzMsg.className = 'win';
+    say(praise);
+    if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+    if (!pzSolved.includes(pzIndex)) { pzSolved.push(pzIndex); localStorage.setItem('pzSolved', JSON.stringify(pzSolved)); }
+    if (pzSolved.length === PUZZLES.length) pzMsg.textContent = '🏆 Ты решил все головоломки!';
+    drawLevels();
+  });
+  drawLevels();
+}
+
+function drawLevels() {
+  const box = document.getElementById('pzLevels');
+  box.innerHTML = '';
+  PUZZLES.forEach((_, i) => {
+    const b = document.createElement('button');
+    b.textContent = i + 1;
+    if (i === pzIndex) b.classList.add('current');
+    if (pzSolved.includes(i)) b.classList.add('done');
+    b.onclick = () => showPuzzle(i);
+    box.appendChild(b);
+  });
+}
+
+document.getElementById('pzPrev').onclick = () => showPuzzle(pzIndex - 1);
+document.getElementById('pzNext').onclick = () => showPuzzle(pzIndex + 1);
+document.getElementById('pzRetry').onclick = () => showPuzzle(pzIndex);
+showPuzzle(0);
+
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');
 let ideas = JSON.parse(localStorage.getItem('ideas') || '[]');
