@@ -431,18 +431,24 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 /* Вкладка «Звуки» — большое поле, которое двигается в любую сторону */
 #sounds.active { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .sbTop { display: flex; gap: 8px; justify-content: center; padding: 8px; background: var(--card); flex-shrink: 0; z-index: 2; }
-.sbTop button { font-size: .7rem; padding: 8px 14px; }
+.sbTop { flex-wrap: wrap; gap: 6px; }
+.sbTop button { font-size: .62rem; padding: 8px 10px; }
+.sbTop [hidden] { display: none; }
 .sbScroll {
   flex: 1; min-height: 0; overflow: auto; touch-action: pan-x pan-y; overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch; cursor: grab;
 }
 .sbBoard {
-  display: inline-block; padding: 70vh 80vw; /* много места вокруг кнопок — есть куда ехать */
+  display: block; width: 1600px; height: 1600px; /* большое поле — есть куда ехать (SB_BOARD в app.js) */
   background-color: #1f1850;
   background-image: radial-gradient(circle, rgba(255,255,255,.18) 1.5px, transparent 1.6px);
   background-size: 28px 28px;
 }
-#sbGrid { display: grid; grid-template-columns: repeat(5, 110px); gap: 14px; }
+#sbGrid { position: relative; width: 100%; height: 100%; }
+#sbGrid .sbBtn { position: absolute; width: 110px; height: 110px; }
+#sbGrid.moving .sbBtn { touch-action: none; cursor: move; outline: 3px dashed rgba(255,255,255,.7); outline-offset: 3px; animation: sbWiggle .5s ease-in-out infinite alternate; }
+#sbGrid .sbBtn.dragging { z-index: 5; animation: none; transform: scale(1.12); box-shadow: 0 14px 24px rgba(0,0,0,.45); }
+@keyframes sbWiggle { from { rotate: -2deg; } to { rotate: 2deg; } }
 .sbBtn {
   position: relative; aspect-ratio: 1; padding: 4px; border-radius: 22px; color: #fff;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;

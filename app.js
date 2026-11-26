@@ -1,4 +1,4 @@
-/* build 44 */
+/* build 45 */
 // ===== Переключение экранов =====
 document.querySelectorAll('nav button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1033,8 +1033,23 @@ function playSoundButton(b) {
   }
 }
 
+// ---------- Поле с кнопками: кнопки можно расставлять как удобно ----------
+const SB_BOARD = 1600;            // размер поля (в пикселях) — по нему можно ездить во все стороны
+const SB_SIZE = 110, SB_GAP = 14, SB_COLS = 5;
+let sbPos = JSON.parse(localStorage.getItem('sbPositions') || '{}'); // где стоит каждая кнопка
+let sbMoving = false;             // режим «✋ Двигать»
+const sbKey = b => b.id ? 'my:' + b.id : 'base:' + b.label;
+const sbSavePos = () => localStorage.setItem('sbPositions', JSON.stringify(sbPos));
+// Место «по порядку»: ровные ряды по 5 кнопок посередине поля
+function sbDefaultPos(i) {
+  const cell = SB_SIZE + SB_GAP, x0 = (SB_BOARD - (SB_COLS * cell - SB_GAP)) / 2, y0 = SB_BOARD / 2 - 200;
+  return [x0 + (i % SB_COLS) * cell, y0 + Math.floor(i / SB_COLS) * cell];
+}
+const sbClamp = v => Math.min(SB_BOARD - SB_SIZE, Math.max(0, v));
+
 function sbDraw() {
   sbGrid.innerHTML = '';
+  sbGrid.classList.toggle('moving', sbMoving);
   [...SOUND_BUTTONS, ...sbCustom].forEach((b, i) => {
     const el = document.createElement('button');
     el.className = 'sbBtn';
@@ -1042,14 +1057,43 @@ function sbDraw() {
     el.innerHTML = '<span class="sbEmoji"></span><span class="sbLabel"></span>';
     el.querySelector('.sbEmoji').textContent = b.emoji || '🔊';
     el.querySelector('.sbLabel').textContent = b.label;
+    const key = sbKey(b);
+    const [x, y] = sbPos[key] || sbDefaultPos(i);
+    el.style.left = x + 'px'; el.style.top = y + 'px';
     const isCustom = i >= SOUND_BUTTONS.length;
     if (sbEditing && isCustom) el.insertAdjacentHTML('beforeend', '<span class="sbDel">✕</span>');
+
+    // ✋ Двигать: тащим кнопку пальцем, звука нет
+    el.addEventListener('pointerdown', e => {
+      if (!sbMoving) return;
+      e.preventDefault();
+      el.setPointerCapture(e.pointerId);
+      const start = { px: e.clientX, py: e.clientY, x: parseFloat(el.style.left), y: parseFloat(el.style.top) };
+      el.classList.add('dragging');
+      const move = ev => {
+        el.style.left = sbClamp(start.x + ev.clientX - start.px) + 'px';
+        el.style.top = sbClamp(start.y + ev.clientY - start.py) + 'px';
+      };
+      const up = () => {
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
+        el.classList.remove('dragging');
+        sbPos[key] = [Math.round(parseFloat(el.style.left)), Math.round(parseFloat(el.style.top))];
+        sbSavePos();
+      };
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    });
+
     // click, а не pointerdown: если палец двигает поле — кнопка не звучит, звучит только настоящее нажатие
     el.addEventListener('click', () => {
-      if (sbPanned) return;          // мышкой тянули поле — это не нажатие
+      if (sbPanned || sbMoving) return;
       if (sbEditing) {
         if (isCustom && confirm(`Удалить кнопку «${b.label}»?`)) {
           sbCustom = sbCustom.filter(x => x !== b);
+          delete sbPos[key]; sbSavePos();
           localStorage.setItem('soundButtons', JSON.stringify(sbCustom));
           sbDraw();
         }
@@ -1062,22 +1106,34 @@ function sbDraw() {
     sbGrid.appendChild(el);
   });
 }
+
 // ---------- Большое поле: двигай вправо, влево, вверх и вниз ----------
 // Пальцем поле листается само (прокрутка в обе стороны). Для мышки — тянем поле с зажатой кнопкой.
 const sbScroll = document.getElementById('sbScroll');
 let sbPan = null, sbPanned = false;
+// Показать все кнопки: едем к середине того места, где они стоят
 function sbCenter(smooth) {
-  const grid = sbGrid.getBoundingClientRect(), box = sbScroll.getBoundingClientRect();
+  const btns = [...sbGrid.children];
+  if (!btns.length) return;
+  const xs = btns.map(b => parseFloat(b.style.left)), ys = btns.map(b => parseFloat(b.style.top));
+  const cx = (Math.min(...xs) + Math.max(...xs) + SB_SIZE) / 2, top = Math.min(...ys);
+  const h = Math.max(...ys) + SB_SIZE - top;
   sbScroll.scrollTo({
-    left: sbScroll.scrollLeft + grid.left - box.left - (box.width - grid.width) / 2,
-    top: sbScroll.scrollTop + grid.top - box.top - Math.max(10, (box.height - grid.height) / 2),
+    left: cx - sbScroll.clientWidth / 2,
+    top: h < sbScroll.clientHeight ? top + h / 2 - sbScroll.clientHeight / 2 : top - 20,
     behavior: smooth ? 'smooth' : 'auto',
   });
+}
+// Середина того места поля, которое сейчас видно на экране — туда ставим новую кнопку
+function sbViewCenter() {
+  return [sbClamp(Math.round(sbScroll.scrollLeft + sbScroll.clientWidth / 2 - SB_SIZE / 2)),
+          sbClamp(Math.round(sbScroll.scrollTop + sbScroll.clientHeight / 2 - SB_SIZE / 2))];
 }
 document.getElementById('sbCenter').onclick = () => sbCenter(true);
 document.querySelector('nav [data-screen=sounds]').addEventListener('click', () => requestAnimationFrame(() => sbCenter(false)));
 sbScroll.addEventListener('pointerdown', e => {
-  if (e.pointerType !== 'mouse') return; // на телефоне прокрутка пальцем работает сама
+  if (e.pointerType !== 'mouse') return;                 // на телефоне прокрутка пальцем работает сама
+  if (sbMoving && e.target.closest('.sbBtn')) return;    // в режиме «Двигать» тащим кнопку, а не поле
   sbPan = { x: e.clientX, y: e.clientY, l: sbScroll.scrollLeft, t: sbScroll.scrollTop };
   sbPanned = false;
 });
@@ -1089,8 +1145,21 @@ window.addEventListener('pointermove', e => {
 });
 window.addEventListener('pointerup', () => { sbPan = null; setTimeout(() => { sbPanned = false; }, 0); });
 
+document.getElementById('sbMove').onclick = e => {
+  sbMoving = !sbMoving;
+  if (sbMoving && sbEditing) document.getElementById('sbEdit').click();
+  e.currentTarget.textContent = sbMoving ? '✅ Готово' : '✋ Двигать';
+  document.getElementById('sbReset').hidden = !sbMoving;
+  if (sbMoving) showToast('Тащи кнопки пальцем куда хочешь');
+  sbDraw();
+};
+document.getElementById('sbReset').onclick = () => {
+  if (!confirm('Расставить все кнопки ровными рядами?')) return;
+  sbPos = {}; sbSavePos(); sbDraw(); sbCenter(true);
+};
 document.getElementById('sbEdit').onclick = e => {
   sbEditing = !sbEditing;
+  if (sbEditing && sbMoving) document.getElementById('sbMove').click();
   e.currentTarget.textContent = sbEditing ? '✅ Готово' : '✏️ Изменить';
   if (sbEditing && !sbCustom.length) showToast('Удалять можно только свои кнопки');
   sbDraw();
@@ -1162,6 +1231,8 @@ document.getElementById('sbSave').onclick = () => {
                   color: SB_COLORS[Math.floor(Math.random() * SB_COLORS.length)] });
   try { localStorage.setItem('soundButtons', JSON.stringify(sbCustom)); }
   catch (e) { sbCustom.pop(); return showToast('Память переполнена — удали старые кнопки'); }
+  sbPos[sbKey(sbCustom.at(-1))] = sbViewCenter(); // новая кнопка — посередине экрана
+  sbSavePos();
   sbDialog.hidden = true;
   sbDraw();
   showToast('🔊 Кнопка «' + label + '» добавлена');
