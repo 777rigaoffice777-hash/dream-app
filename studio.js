@@ -1,4 +1,4 @@
-/* build 37 */
+/* build 38 */
 // ===== 3D-мастерская и вкладка «Продукты» =====
 // Объект собирается из фигур. Каждую фигуру можно двигать пальцем, красить,
 // менять размер и поворачивать. Готовый объект сохраняется в «Продукты».
@@ -427,23 +427,39 @@ function syncPanel() {
 const mergeBar = document.getElementById('stMergeBar');
 let mergeSet = null; // какие фигуры выбраны для объединения
 const MERGE_GLOW = 0x0050c8;
+// Зелёная рамка вокруг выбранной фигуры — видна при любом цвете
+const mergeBoxes = new Map();
+function markMerge(node, on) {
+  glow(node, on ? MERGE_GLOW : 0x000000);
+  if (on && !mergeBoxes.has(node)) {
+    const box = new THREE.BoxHelper(node, 0x2ecc40);
+    box.material.depthTest = false; // видно даже сквозь другие фигуры
+    box.renderOrder = 10;
+    stage.scene.add(box);
+    mergeBoxes.set(node, box);
+  } else if (!on && mergeBoxes.has(node)) {
+    const box = mergeBoxes.get(node);
+    stage.scene.remove(box); box.geometry.dispose(); box.material.dispose();
+    mergeBoxes.delete(node);
+  }
+}
 
 function startMerge() {
   if (!selected) return;
   const first = selected;
   select(null);
   mergeSet = new Set([first]);
-  glow(first, MERGE_GLOW);
+  markMerge(first, true);
   updateMergeBar();
 }
 function toggleMerge(node) {
-  if (mergeSet.has(node)) { mergeSet.delete(node); glow(node, 0x000000); }
-  else { mergeSet.add(node); glow(node, MERGE_GLOW); }
+  if (mergeSet.has(node)) { mergeSet.delete(node); markMerge(node, false); }
+  else { mergeSet.add(node); markMerge(node, true); }
   sfx('pop');
   updateMergeBar();
 }
 function endMerge() {
-  if (mergeSet) mergeSet.forEach(n => glow(n, 0x000000));
+  if (mergeSet) mergeSet.forEach(n => markMerge(n, false));
   mergeSet = null;
   updateMergeBar();
 }
