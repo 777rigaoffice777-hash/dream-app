@@ -740,4 +740,39 @@ installBtn.onclick = async () => {
   deferredPrompt = null; installBtn.hidden = true;
 };
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+// ===== Автообновление =====
+// Установленное приложение само проверяет, нет ли новой версии на сайте,
+// и если есть — перезагружается. Номер версии лежит в version.json (поднимает bash bump.sh).
+const APP_VERSION = document.querySelector('meta[name="app-version"]').content;
+document.getElementById('appVersion').textContent = 'версия ' + APP_VERSION;
+
+async function checkForUpdate() {
+  try {
+    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+    const { v } = await r.json();
+    if (String(v) === APP_VERSION) return;
+    // Защита от бесконечной перезагрузки: на каждую новую версию — не больше одной попытки
+    if (sessionStorage.getItem('reloadedFor') === String(v)) return;
+    sessionStorage.setItem('reloadedFor', v);
+    sessionStorage.setItem('justUpdated', v);
+    const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
+    if (reg) await reg.update().catch(() => {});
+    location.replace(location.pathname + '?v=' + v);
+  } catch (e) { /* нет интернета — ничего страшного */ }
+}
+
+function showToast(text) {
+  const t = document.getElementById('toast');
+  t.textContent = text; t.hidden = false;
+  setTimeout(() => { t.hidden = true; }, 3000);
+}
+if (sessionStorage.getItem('justUpdated') === APP_VERSION) {
+  sessionStorage.removeItem('justUpdated');
+  showToast('✨ Приложение обновлено до версии ' + APP_VERSION);
+}
+
+checkForUpdate();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
+setInterval(checkForUpdate, 60000);
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });

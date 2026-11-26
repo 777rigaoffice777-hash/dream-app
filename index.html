@@ -7,14 +7,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
+  <meta name="app-version" content="22">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=21">
+  <link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
   <header>
-    <h1>✨ Мастерская</h1>
+    <div class="titleBox"><h1>✨ Мастерская</h1><small id="appVersion"></small></div>
     <button id="installBtn" hidden>Установить</button>
   </header>
 
@@ -164,6 +165,7 @@
       <p id="magicOut"></p>
     </section>
   </main>
+  <div id="toast" hidden></div>
 
   <nav>
     <button data-screen="dots" class="active">🔴<span>Точки</span></button>
@@ -175,6 +177,6 @@
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>
