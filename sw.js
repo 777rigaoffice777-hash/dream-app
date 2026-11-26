@@ -1,6 +1,6 @@
 // Service worker: позволяет приложению открываться даже без интернета.
 // Сначала пробует сеть (чтобы сразу видеть свежие изменения), если нет сети — берёт из кэша.
-const CACHE = 'masterskaya-v14';
+const CACHE = 'masterskaya-v15';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));

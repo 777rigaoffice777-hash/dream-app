@@ -272,14 +272,17 @@ function choicePuzzle(board, options, correct, win) {
   });
 }
 
-// Пятнашки 3×3. moves — сколько ходов перемешивать (больше = сложнее)
-function slidingPuzzle(board, win, moves) {
+// Пятнашки size×size (3 или 4). moves — сколько ходов перемешивать (больше = сложнее)
+function slidingPuzzle(board, win, moves, size = 3) {
+  const N = size * size;
   const grid = document.createElement('div');
-  grid.className = 'pz15';
+  grid.className = 'pz15' + (size > 3 ? ' big' : '');
+  grid.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
   board.appendChild(grid);
-  const GOAL = '1,2,3,4,5,6,7,8,0';
-  let tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0]; // 0 — пустое место
-  const neighbors = i => [i - 3, i + 3, i % 3 ? i - 1 : -1, i % 3 < 2 ? i + 1 : -1].filter(n => n >= 0 && n < 9);
+  let tiles = [...Array(N).keys()].map(i => (i + 1) % N); // 1..N-1, 0 — пустое место
+  const GOAL = tiles.join();
+  const neighbors = i => [i - size, i + size, i % size ? i - 1 : -1, i % size < size - 1 ? i + 1 : -1]
+    .filter(n => n >= 0 && n < N);
   let prev = -1;
   for (let k = 0; k < moves || tiles.join() === GOAL; k++) {
     const e = tiles.indexOf(0);
@@ -312,6 +315,7 @@ function memoryPuzzle(board, win, emojis, cols) {
   const grid = document.createElement('div');
   grid.className = 'pzMemory';
   grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  if (emojis.length > 6) grid.classList.add('many');
   board.appendChild(grid);
   let open = [], found = 0, busy = false;
   shuffle([...emojis, ...emojis]).forEach(emoji => {
@@ -406,9 +410,153 @@ const PUZZLES = [
     task: 'Уже 6 пар! Запоминай, где что лежит.',
     render: (board, win) => memoryPuzzle(board, win, ['🎅', '🎄', '⭐', '❄️', '🎁', '⛄'], 4),
   },
+
+  // ---------- Сложные ----------
+  {
+    level: 'hard', title: 'Хитрый ряд',
+    task: 'Найди правило: как из двух чисел получается следующее?',
+    render: (board, win) => {
+      board.insertAdjacentHTML('beforeend', '<div class="pzSeq">1, 1, 2, 3, 5, 8, ❓</div>');
+      choicePuzzle(board, ['11', '12', '13', '16'], '13', win);
+    },
+  },
+  {
+    level: 'hard', title: 'Фрукты и порядок действий',
+    task: 'Сначала найди каждый фрукт. Помни: умножение делается раньше сложения!',
+    render: (board, win) => {
+      board.insertAdjacentHTML('beforeend',
+        '<div class="pzRiddle" style="font-style:normal">🍎 + 🍎 + 🍎 = 15<br>🍌 + 🍌 + 🍎 = 13<br>🍇 + 🍌 = 7<br><b>🍎 + 🍌 × 🍇 = ❓</b></div>');
+      choicePuzzle(board, ['27', '17', '12', '20'], '17', win);
+    },
+  },
+  {
+    level: 'hard', title: 'Задача с подвохом',
+    task: 'Читай очень внимательно!',
+    render: (board, win) => {
+      board.insertAdjacentHTML('beforeend',
+        '<div class="pzRiddle">У пастуха было 17 овец.<br>Все, кроме 9, убежали.<br>Сколько овец осталось?</div>');
+      choicePuzzle(board, ['8', '9', '17', '26'], '9', win);
+    },
+  },
+  {
+    level: 'hard', title: 'Пятнашки',
+    task: 'Всё перемешано по-настоящему! Расставь числа от 1 до 8.',
+    render: (board, win) => slidingPuzzle(board, win, 200),
+  },
+  {
+    level: 'hard', title: 'Найди пары',
+    task: '8 пар! Нужна хорошая память.',
+    render: (board, win) => memoryPuzzle(board, win, ['🎅', '🎄', '⭐', '❄️', '🎁', '⛄', '🦌', '🔔'], 4),
+  },
+
+  // ---------- Очень сложные ----------
+  {
+    level: 'expert', title: 'Ряд для гения',
+    task: 'Посмотри, на сколько вырастает каждое следующее число.',
+    render: (board, win) => {
+      board.insertAdjacentHTML('beforeend', '<div class="pzSeq">2, 6, 12, 20, 30, ❓</div>');
+      choicePuzzle(board, ['36', '40', '42', '44'], '42', win);
+    },
+  },
+  {
+    level: 'expert', title: 'Улитка',
+    task: 'Подумай, что случится в последний день.',
+    render: (board, win) => {
+      board.insertAdjacentHTML('beforeend',
+        '<div class="pzRiddle">🐌 Улитка ползёт вверх по столбу высотой 10 метров.<br>Днём поднимается на 3 метра,<br>ночью сползает на 2 метра.<br>За сколько дней она доберётся до верха?</div>');
+      choicePuzzle(board, ['10', '9', '8', '7'], '8', win);
+    },
+  },
+  {
+    level: 'expert', title: 'Ханойская башня',
+    task: 'Перенеси всю башню на правый столбик. Нажми на столбик, чтобы взять верхний диск, и на другой — чтобы положить. Большой диск нельзя класть на маленький!',
+    render: (board, win) => hanoiPuzzle(board, win, 4),
+  },
+  {
+    level: 'expert', title: 'Выключи свет',
+    task: 'Нажатие переключает лампочку и её соседей сверху, снизу, слева и справа. Выключи все лампочки!',
+    render: (board, win) => lightsPuzzle(board, win, 4, 5),
+  },
+  {
+    level: 'expert', title: 'Пятнашки 4×4',
+    task: 'Большие пятнашки! Расставь числа от 1 до 15.',
+    render: (board, win) => slidingPuzzle(board, win, 60, 4),
+  },
 ];
 
-const LEVEL_NAMES = { easy: 'Лёгкие', medium: 'Средние' };
+// Ханойская башня: disks — сколько дисков
+function hanoiPuzzle(board, win, disks) {
+  const wrap = document.createElement('div');
+  wrap.className = 'hanoi';
+  board.appendChild(wrap);
+  const info = document.createElement('div');
+  info.className = 'hanoiInfo';
+  board.appendChild(info);
+  const pegs = [[...Array(disks).keys()].map(i => disks - i), [], []]; // внизу самый большой
+  let selected = null, moves = 0, done = false;
+  const best = 2 ** disks - 1;
+  const COLORS = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'];
+  const draw = () => {
+    wrap.innerHTML = '';
+    pegs.forEach((peg, p) => {
+      const col = document.createElement('button');
+      col.className = 'peg' + (selected === p ? ' sel' : '');
+      col.innerHTML = '<div class="rod"></div>' + peg.map(d =>
+        `<div class="disk" style="width:${25 + d * 15}%;background:${COLORS[(d - 1) % COLORS.length]}"></div>`).join('');
+      col.onclick = () => {
+        if (done) return;
+        if (selected === null) { if (peg.length) selected = p; }
+        else if (selected === p) selected = null;
+        else {
+          const from = pegs[selected], disk = from[from.length - 1];
+          if (!peg.length || peg[peg.length - 1] > disk) { peg.push(from.pop()); moves++; selected = null; }
+          else { col.classList.remove('bad'); void col.offsetWidth; col.classList.add('bad'); if (navigator.vibrate) navigator.vibrate(80); return; }
+        }
+        draw();
+        if (pegs[2].length === disks) { done = true; win(); }
+      };
+      wrap.appendChild(col);
+    });
+    info.textContent = `Ходов: ${moves}  ·  Лучший результат: ${best}`;
+  };
+  draw();
+}
+
+// Выключи свет: size×size, presses — сколько случайных нажатий для начальной картинки
+function lightsPuzzle(board, win, size, presses) {
+  const grid = document.createElement('div');
+  grid.className = 'lights';
+  grid.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+  board.appendChild(grid);
+  const N = size * size;
+  let on = Array(N).fill(false), done = false;
+  const toggle = i => {
+    const r = Math.floor(i / size), c = i % size;
+    [[r, c], [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([y, x]) => {
+      if (y >= 0 && y < size && x >= 0 && x < size) on[y * size + x] = !on[y * size + x];
+    });
+  };
+  // Начинаем с «всё выключено» и делаем случайные нажатия — так задача всегда решаема
+  const picks = shuffle([...Array(N).keys()]).slice(0, presses);
+  picks.forEach(toggle);
+  const draw = () => {
+    grid.innerHTML = '';
+    on.forEach((isOn, i) => {
+      const b = document.createElement('button');
+      b.className = isOn ? 'on' : '';
+      b.textContent = isOn ? '💡' : '';
+      b.onclick = () => {
+        if (done) return;
+        toggle(i); draw();
+        if (on.every(x => !x)) { done = true; win(); }
+      };
+      grid.appendChild(b);
+    });
+  };
+  draw();
+}
+
+const LEVEL_NAMES = { easy: 'Лёгкие', medium: 'Средние', hard: 'Сложные', expert: 'Очень сложные' };
 let pzIndex = 0;
 let pzSolved = JSON.parse(localStorage.getItem('pzSolved') || '[]');
 const pzBoard = document.getElementById('pzBoard');

@@ -209,8 +209,10 @@ main { position: relative; }
 .pz15 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(80vw, 300px); }
 .pz15 button {
   aspect-ratio: 1; font-size: 1.6rem; font-weight: 800; border-radius: 14px;
-  background: var(--accent); color: #1b1440; transition: transform .1s;
+  background: var(--accent); color: #1b1440; transition: transform .1s; padding: 0; min-width: 0;
 }
+.pz15.big { width: min(86vw, 320px); gap: 6px; }
+.pz15.big button { font-size: 1.15rem; border-radius: 10px; }
 .pz15 button.empty { background: transparent; box-shadow: inset 0 0 0 2px var(--card); }
 
 .pzMemory { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: min(80vw, 300px); }
@@ -220,6 +222,31 @@ main { position: relative; }
 }
 .pzMemory button.open { background: #fff; color: initial; }
 .pzMemory button.matched { background: #7CFC9A; color: initial; }
+.pzMemory.many button { aspect-ratio: 1; font-size: 1.5rem; }
+
+/* Ханойская башня */
+.hanoi { display: flex; gap: 8px; width: 100%; max-width: 360px; }
+.hanoi .peg {
+  flex: 1; height: 190px; position: relative; padding: 0 0 8px; border-radius: 14px;
+  background: var(--card); display: flex; flex-direction: column-reverse; align-items: center; gap: 3px;
+}
+.hanoi .peg.sel { box-shadow: inset 0 0 0 3px var(--accent); }
+.hanoi .peg.bad { animation: shake .35s; }
+.hanoi .rod {
+  position: absolute; bottom: 8px; left: 50%; width: 6px; height: 160px; margin-left: -3px;
+  background: #8d6e63; border-radius: 3px;
+}
+.hanoi .disk { height: 22px; border-radius: 11px; position: relative; box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.hanoi .peg.sel .disk:last-child { transform: translateY(-14px); }
+.hanoiInfo { width: 100%; text-align: center; font-size: .8rem; opacity: .85; margin-top: 8px; }
+
+/* Выключи свет */
+.lights { display: grid; gap: 8px; width: min(80vw, 300px); }
+.lights button {
+  aspect-ratio: 1; padding: 0; min-width: 0; border-radius: 14px; font-size: 1.5rem;
+  background: #2b2560; box-shadow: inset 0 0 0 2px #3d3680;
+}
+.lights button.on { background: #ffe066; box-shadow: 0 0 18px #ffd60a; }
 
 #pzMsg { text-align: center; font-size: 1.2rem; font-weight: 800; min-height: 1.6em; margin: 16px 0 6px; color: var(--accent); }
 #pzMsg.win { animation: targetPulse .6s ease; }
@@ -229,6 +256,6 @@ main { position: relative; }
 code { background: var(--card); padding: 2px 6px; border-radius: 6px; }
 
 /* Переключатель «Лёгкие / Средние» */
-#pzGroups { display: flex; gap: 8px; justify-content: center; margin-top: 6px; }
-#pzGroups button { background: var(--card); color: var(--text); font-size: .8rem; padding: 6px 14px; }
+#pzGroups { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+#pzGroups button { background: var(--card); color: var(--text); font-size: .7rem; padding: 6px 8px; }
 #pzGroups button.current { background: var(--accent); color: #1b1440; }
