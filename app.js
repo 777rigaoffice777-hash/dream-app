@@ -558,7 +558,81 @@ function lightsPuzzle(board, win, size, presses) {
   draw();
 }
 
-const LEVEL_NAMES = { easy: 'Лёгкие', medium: 'Средние', hard: 'Сложные', expert: 'Очень сложные' };
+// ---------- Угадай картинку ----------
+// Картинка закрыта плитками, они открываются по одной. Угадай как можно раньше!
+// Чтобы добавить картинку — допиши строку: { pic: 'эмодзи', name: 'Название' }
+const PICTURES = [
+  { pic: '🐘', name: 'Слон' },
+  { pic: '🚀', name: 'Ракета' },
+  { pic: '🦒', name: 'Жираф' },
+  { pic: '🍉', name: 'Арбуз' },
+  { pic: '🐧', name: 'Пингвин' },
+  { pic: '🎸', name: 'Гитара' },
+  { pic: '🦀', name: 'Краб' },
+  { pic: '🚁', name: 'Вертолёт' },
+  { pic: '🐢', name: 'Черепаха' },
+  { pic: '🏰', name: 'Замок' },
+];
+const REVEAL_EVERY_MS = 1500; // как часто открывается плитка
+
+function pictureGuess(board, win, item) {
+  const wrap = document.createElement('div');
+  wrap.className = 'picWrap';
+  wrap.innerHTML = `<div class="picEmoji">${item.pic}</div><div class="picCover"></div>`;
+  board.appendChild(wrap);
+  const cover = wrap.querySelector('.picCover');
+  const tiles = [...Array(9)].map(() => {
+    const t = document.createElement('div');
+    t.textContent = '?';
+    cover.appendChild(t);
+    return t;
+  });
+  let order = shuffle([...tiles.keys()]), done = false;
+  const openOne = () => { const i = order.pop(); if (i !== undefined) tiles[i].classList.add('gone'); };
+  const openAll = () => { while (order.length) openOne(); };
+
+  const timer = setInterval(() => {
+    if (!wrap.isConnected || done) return clearInterval(timer);   // ушли с этой картинки
+    if (!document.getElementById('puzzles').classList.contains('active') || document.hidden) return;
+    openOne();
+  }, REVEAL_EVERY_MS);
+
+  const others = shuffle(PICTURES.filter(p => p !== item)).slice(0, 3).map(p => p.name);
+  const answers = document.createElement('div');
+  answers.className = 'picAnswers';
+  board.appendChild(answers);
+  shuffle([item.name, ...others]).forEach(name => {
+    const b = document.createElement('button');
+    b.className = 'pzItem text';
+    b.textContent = name;
+    b.onclick = () => {
+      if (done) return;
+      if (name === item.name) {
+        done = true;
+        const closed = order.length;   // сколько плиток ещё было закрыто
+        openAll();
+        b.classList.add('good');
+        win();
+        pzMsg.textContent = closed >= 6 ? '🦅 Орлиный глаз! Угадал почти сразу!'
+                          : closed >= 3 ? '🎉 Отлично! Быстро угадал!'
+                          : '🎉 Угадал! Это ' + item.name.toLowerCase() + '!';
+      } else {
+        b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad');
+        if (navigator.vibrate) navigator.vibrate(80);
+        openOne(); openOne();          // ошибка — открываем подсказку
+      }
+    };
+    answers.appendChild(b);
+  });
+}
+
+PICTURES.forEach(item => PUZZLES.push({
+  level: 'pictures', title: 'Угадай картинку',
+  task: 'Что спрятано под плитками? Угадай как можно раньше!',
+  render: (board, win) => pictureGuess(board, win, item),
+}));
+
+const LEVEL_NAMES = { easy: 'Лёгкие', medium: 'Средние', hard: 'Сложные', expert: 'Очень сложные', pictures: '🖼️ Угадай картинку' };
 let pzIndex = 0;
 let pzSolved = JSON.parse(localStorage.getItem('pzSolved') || '[]');
 const pzBoard = document.getElementById('pzBoard');
