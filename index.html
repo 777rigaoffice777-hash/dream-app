@@ -7,11 +7,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
-  <meta name="app-version" content="41">
+  <meta name="app-version" content="42">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=41">
+  <link rel="stylesheet" href="style.css?v=42">
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
   </script>
@@ -263,6 +263,42 @@
       <ol id="nbHist"></ol>
     </section>
 
+    <!-- Звуковые кнопки -->
+    <section id="sounds" class="screen">
+      <h2>🔊 Звуковые кнопки</h2>
+      <div id="sbGrid"></div>
+      <div class="row sbBar">
+        <button id="sbAdd">➕ Своя кнопка</button>
+        <button id="sbEdit">✏️ Изменить</button>
+      </div>
+      <div class="sbDialog" id="sbDialog" hidden>
+        <div class="sbBox">
+          <div class="sbTitle">Новая кнопка</div>
+          <div class="sbRow">
+            <input id="sbEmoji" maxlength="4" placeholder="🙂" autocomplete="off">
+            <input id="sbLabel" maxlength="20" placeholder="Название" autocomplete="off">
+          </div>
+          <div class="sbKinds">
+            <button data-kind="say" class="sel">🗣 Сказать слово</button>
+            <button data-kind="rec">🎙 Записать голос</button>
+          </div>
+          <div class="sbKind" data-kind="say">
+            <input id="sbText" maxlength="100" placeholder="Что сказать? Например: Привет!" autocomplete="off">
+            <button id="sbTry">▶ Послушать</button>
+          </div>
+          <div class="sbKind" data-kind="rec" hidden>
+            <button id="sbRec">🔴 Записать</button>
+            <span id="sbRecInfo">до 5 секунд</span>
+            <button id="sbPlay" hidden>▶ Послушать</button>
+          </div>
+          <div class="row sbActions">
+            <button id="sbCancel">Отмена</button>
+            <button id="sbSave">💾 Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Экран: Идеи -->
     <section id="ideas" class="screen">
       <h2>Мои идеи</h2>
@@ -303,12 +339,13 @@
     <button data-screen="studio">🧊<span>3D</span></button>
     <button data-screen="products">📦<span>Продукты</span></button>
     <button data-screen="numbers">🎲<span>Числа</span></button>
+    <button data-screen="sounds">🔊<span>Звуки</span></button>
     <button data-screen="ideas">💡<span>Идеи</span></button>
     <button data-screen="draw">🎨<span>Рисовать</span></button>
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=41"></script>
-  <script type="module" src="studio.js?v=41"></script>
+  <script src="app.js?v=42"></script>
+  <script type="module" src="studio.js?v=42"></script>
 </body>
 </html>

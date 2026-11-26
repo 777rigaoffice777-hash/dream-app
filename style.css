@@ -426,3 +426,37 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 .nbHistTitle { margin-top: 16px; font-size: .7rem; opacity: .7; }
 #nbHist { margin: 4px 0 0; padding-left: 1.6em; font-size: .7rem; word-break: break-all; }
 #nbHist li { margin: 3px 0; }
+
+/* ===== Звуковые кнопки ===== */
+#sounds h2 { text-align: center; }
+#sbGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sbBtn {
+  position: relative; aspect-ratio: 1; padding: 4px; border-radius: 22px; color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  box-shadow: 0 6px 0 rgba(0,0,0,.25); touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.sbBtn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.sbBtn.hit { animation: sbHit .3s ease; }
+@keyframes sbHit { 40% { transform: scale(1.1) rotate(-3deg); } }
+.sbEmoji { font-size: 1.9rem; line-height: 1; }
+.sbLabel { font-size: .6rem; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.sbDel { position: absolute; top: -6px; right: -6px; width: 1.5em; height: 1.5em; border-radius: 50%; background: #fff; color: #c00; font-size: .7rem; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.sbBar { justify-content: center; margin-top: 16px; }
+.sbBar button { font-size: .75rem; }
+.sbDialog { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+.sbDialog[hidden] { display: none; }
+.sbBox { background: var(--card); width: 90%; max-width: 420px; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sbTitle { font-weight: 800; text-align: center; }
+.sbRow { display: flex; gap: 8px; }
+.sbBox input { font: inherit; font-size: .8rem; padding: 10px; border-radius: 12px; border: 0; min-width: 0; }
+#sbEmoji { width: 3.2em; text-align: center; font-size: 1rem; }
+#sbLabel, #sbText { flex: 1; width: 100%; }
+.sbKinds { display: flex; gap: 6px; }
+.sbKinds button { flex: 1; font-size: .6rem; background: #3a3180; color: var(--text); }
+.sbKinds button.sel { background: var(--accent); color: #1b1440; }
+.sbKind { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sbKind[hidden] { display: none; }
+.sbKind button { font-size: .65rem; }
+#sbRecInfo { font-size: .6rem; opacity: .85; }
+.sbActions { justify-content: flex-end; }
+.sbActions button { font-size: .7rem; }

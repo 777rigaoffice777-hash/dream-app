@@ -1,4 +1,4 @@
-/* build 41 */
+/* build 42 */
 // ===== Переключение экранов =====
 document.querySelectorAll('nav button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -940,6 +940,205 @@ function nbDrawHistory() {
 }
 nbDrawHistory();
 
+// ===== Звуковые кнопки =====
+// Готовые кнопки. kind: 'fx' — звук-эффект (синтезатор), 'say' — телефон говорит слово.
+// Чтобы добавить или поменять слово — допиши строку сюда, например:
+//   { emoji: '🐶', label: 'Собака', kind: 'say', text: 'Гав-гав!' },
+const SOUND_BUTTONS = [
+  { emoji: '🥁', label: 'Бум',    kind: 'fx',  fx: 'boom' },
+  { emoji: '🔔', label: 'Дзынь',  kind: 'fx',  fx: 'bell' },
+  { emoji: '🚀', label: 'Пиу',    kind: 'fx',  fx: 'laser' },
+  { emoji: '💨', label: 'Вжух',   kind: 'fx',  fx: 'whoosh' },
+  { emoji: '👏', label: 'Хлоп',   kind: 'fx',  fx: 'clap' },
+  { emoji: '🤸', label: 'Бойнг',  kind: 'fx',  fx: 'boing' },
+  { emoji: '👋', label: 'Привет', kind: 'say', text: 'Привет!' },
+  { emoji: '🎉', label: 'Ура',    kind: 'say', text: 'Ура-а-а!' },
+  { emoji: '😮', label: 'Ой',     kind: 'say', text: 'Ой!' },
+];
+const SB_COLORS = ['#ff595e', '#ff924c', '#ffca3a', '#8ac926', '#2ec4b6', '#1982c4', '#6a4c93', '#ff6fb5'];
+const SB_MAX_REC_MS = 5000;
+
+// Звуки-эффекты: собираются из простых волн и шума
+const SOUND_FX = {
+  boom(ctx, t, out) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.5);
+    g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    o.connect(g).connect(out); o.start(t); o.stop(t + 0.65);
+    noiseBurst(ctx, t, 0.08, 0.6, 'lowpass', 900, out);
+  },
+  bell(ctx, t, out) {
+    [880, 1320, 2200].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.4 / (i + 1), t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 1.5);
+    });
+  },
+  laser(ctx, t, out) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(1800, t); o.frequency.exponentialRampToValueAtTime(180, t + 0.3);
+    g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+    o.connect(g).connect(out); o.start(t); o.stop(t + 0.35);
+  },
+  whoosh(ctx, t, out) {
+    const src = noiseSource(ctx, 0.7), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = 'bandpass'; f.Q.value = 2;
+    f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(4000, t + 0.6);
+    g.gain.setValueAtTime(0.001, t); g.gain.exponentialRampToValueAtTime(0.9, t + 0.25); g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+    src.connect(f).connect(g).connect(out); src.start(t);
+  },
+  clap(ctx, t, out) {
+    [0, 0.012, 0.025].forEach(d => noiseBurst(ctx, t + d, 0.06, 0.8, 'highpass', 1200, out));
+    noiseBurst(ctx, t + 0.03, 0.2, 0.3, 'bandpass', 1500, out);
+  },
+  boing(ctx, t, out) {
+    const o = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(420, t + 0.5);
+    lfo.frequency.value = 18; lg.gain.value = 40; lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.6, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+    o.connect(g).connect(out); o.start(t); lfo.start(t); o.stop(t + 0.75); lfo.stop(t + 0.75);
+  },
+};
+function noiseSource(ctx, dur) {
+  const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = ctx.createBufferSource(); src.buffer = buf; return src;
+}
+function noiseBurst(ctx, t, dur, vol, type, freq, out) {
+  const src = noiseSource(ctx, dur), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  f.type = type; f.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(f).connect(g).connect(out); src.start(t);
+}
+
+let sbCustom = JSON.parse(localStorage.getItem('soundButtons') || '[]');
+let sbEditing = false, sbCurrentAudio = null;
+const sbGrid = document.getElementById('sbGrid');
+
+// Звуковые кнопки звучат всегда — даже если музыка выключена кнопкой 🎵
+function playSoundButton(b) {
+  if (b.kind === 'fx') {
+    const ctx = ensureAudio();
+    if (ctx.state === 'suspended') ctx.resume();
+    SOUND_FX[b.fx](ctx, ctx.currentTime + 0.01, ctx.destination);
+  } else if (b.kind === 'say') {
+    say(b.text);
+  } else if (b.kind === 'rec' && b.audio) {
+    if (sbCurrentAudio) sbCurrentAudio.pause();
+    sbCurrentAudio = new Audio(b.audio);
+    sbCurrentAudio.play();
+  }
+}
+
+function sbDraw() {
+  sbGrid.innerHTML = '';
+  [...SOUND_BUTTONS, ...sbCustom].forEach((b, i) => {
+    const el = document.createElement('button');
+    el.className = 'sbBtn';
+    el.style.background = b.color || SB_COLORS[i % SB_COLORS.length];
+    el.innerHTML = '<span class="sbEmoji"></span><span class="sbLabel"></span>';
+    el.querySelector('.sbEmoji').textContent = b.emoji || '🔊';
+    el.querySelector('.sbLabel').textContent = b.label;
+    const isCustom = i >= SOUND_BUTTONS.length;
+    if (sbEditing && isCustom) el.insertAdjacentHTML('beforeend', '<span class="sbDel">✕</span>');
+    el.addEventListener('pointerdown', () => {
+      if (sbEditing) {
+        if (isCustom && confirm(`Удалить кнопку «${b.label}»?`)) {
+          sbCustom = sbCustom.filter(x => x !== b);
+          localStorage.setItem('soundButtons', JSON.stringify(sbCustom));
+          sbDraw();
+        }
+        return;
+      }
+      el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit');
+      if (navigator.vibrate) navigator.vibrate(15);
+      playSoundButton(b);
+    });
+    sbGrid.appendChild(el);
+  });
+}
+document.getElementById('sbEdit').onclick = e => {
+  sbEditing = !sbEditing;
+  e.currentTarget.textContent = sbEditing ? '✅ Готово' : '✏️ Изменить';
+  if (sbEditing && !sbCustom.length) showToast('Удалять можно только свои кнопки');
+  sbDraw();
+};
+
+// ---------- Своя кнопка: слово или запись голоса ----------
+const sbDialog = document.getElementById('sbDialog');
+let sbKind = 'say', sbRecorded = null, sbRecorder = null, sbRecTimer = null;
+function sbSetKind(kind) {
+  sbKind = kind;
+  sbDialog.querySelectorAll('[data-kind]').forEach(el => {
+    if (el.tagName === 'BUTTON') el.classList.toggle('sel', el.dataset.kind === kind);
+    else el.hidden = el.dataset.kind !== kind;
+  });
+}
+sbDialog.querySelectorAll('.sbKinds button').forEach(b => b.onclick = () => sbSetKind(b.dataset.kind));
+document.getElementById('sbAdd').onclick = () => {
+  ['sbEmoji', 'sbLabel', 'sbText'].forEach(id => { document.getElementById(id).value = ''; });
+  sbRecorded = null;
+  document.getElementById('sbPlay').hidden = true;
+  document.getElementById('sbRecInfo').textContent = 'до 5 секунд';
+  sbSetKind('say');
+  sbDialog.hidden = false;
+};
+document.getElementById('sbCancel').onclick = () => { sbStopRec(); sbDialog.hidden = true; };
+document.getElementById('sbTry').onclick = () => { const t = document.getElementById('sbText').value.trim(); if (t) say(t); };
+document.getElementById('sbPlay').onclick = () => { if (sbRecorded) new Audio(sbRecorded).play(); };
+
+document.getElementById('sbRec').onclick = async () => {
+  if (sbRecorder) return sbStopRec();
+  const info = document.getElementById('sbRecInfo');
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { info.textContent = 'Нет доступа к микрофону — разреши его в настройках'; return; }
+  const chunks = [];
+  sbRecorder = new MediaRecorder(stream);
+  sbRecorder.ondataavailable = e => chunks.push(e.data);
+  sbRecorder.onstop = () => {
+    stream.getTracks().forEach(t => t.stop());
+    const reader = new FileReader();
+    reader.onload = () => { sbRecorded = reader.result; document.getElementById('sbPlay').hidden = false; info.textContent = '✅ Записано!'; };
+    reader.readAsDataURL(new Blob(chunks, { type: sbRecorder.mimeType }));
+    sbRecorder = null;
+    document.getElementById('sbRec').textContent = '🔴 Записать заново';
+  };
+  sbRecorder.start();
+  document.getElementById('sbRec').textContent = '⏹ Стоп';
+  const t0 = Date.now();
+  sbRecTimer = setInterval(() => {
+    const ms = Date.now() - t0;
+    info.textContent = `Запись… ${(ms / 1000).toFixed(1)} с`;
+    if (ms >= SB_MAX_REC_MS) sbStopRec();
+  }, 100);
+};
+function sbStopRec() {
+  clearInterval(sbRecTimer);
+  if (sbRecorder && sbRecorder.state === 'recording') sbRecorder.stop();
+}
+
+document.getElementById('sbSave').onclick = () => {
+  const label = document.getElementById('sbLabel').value.trim();
+  const emoji = document.getElementById('sbEmoji').value.trim() || '🔊';
+  const text = document.getElementById('sbText').value.trim();
+  if (!label) return showToast('Напиши название кнопки');
+  if (sbKind === 'say' && !text) return showToast('Напиши, что сказать');
+  if (sbKind === 'rec' && !sbRecorded) return showToast('Сначала запиши звук');
+  sbCustom.push({ id: Date.now(), emoji, label, kind: sbKind, text: sbKind === 'say' ? text : undefined,
+                  audio: sbKind === 'rec' ? sbRecorded : undefined,
+                  color: SB_COLORS[Math.floor(Math.random() * SB_COLORS.length)] });
+  try { localStorage.setItem('soundButtons', JSON.stringify(sbCustom)); }
+  catch (e) { sbCustom.pop(); return showToast('Память переполнена — удали старые кнопки'); }
+  sbDialog.hidden = true;
+  sbDraw();
+  showToast('🔊 Кнопка «' + label + '» добавлена');
+};
+sbDraw();
+
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');
 let ideas = JSON.parse(localStorage.getItem('ideas') || '[]');
@@ -1091,7 +1290,7 @@ function generatedStep(t, step) {
   return { mel, bass };
 }
 
-const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null, studio: 'calm', products: 'calm', numbers: 'calm' };
+const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null, studio: 'calm', products: 'calm', numbers: 'calm', sounds: null };
 const MUSIC_VOLUME = 0.1;
 
 let musicOn = localStorage.getItem('musicOn') !== '0';
