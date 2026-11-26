@@ -369,8 +369,8 @@ const PUZZLES = [
   },
   {
     level: 'easy', title: 'Найди пары',
-    task: 'Открывай по две карточки и найди одинаковые.',
-    render: (board, win) => memoryPuzzle(board, win, ['🎅', '🎄', '⭐'], 3),
+    task: 'Открывай по две карточки и найди одинаковые картинки.',
+    render: (board, win) => pictureMemory(board, win, 3, 3),
   },
 
   // ---------- Средние ----------
@@ -408,7 +408,7 @@ const PUZZLES = [
   {
     level: 'medium', title: 'Найди пары',
     task: 'Уже 6 пар! Запоминай, где что лежит.',
-    render: (board, win) => memoryPuzzle(board, win, ['🎅', '🎄', '⭐', '❄️', '🎁', '⛄'], 4),
+    render: (board, win) => pictureMemory(board, win, 6, 4),
   },
 
   // ---------- Сложные ----------
@@ -446,7 +446,7 @@ const PUZZLES = [
   {
     level: 'hard', title: 'Найди пары',
     task: '8 пар! Нужна хорошая память.',
-    render: (board, win) => memoryPuzzle(board, win, ['🎅', '🎄', '⭐', '❄️', '🎁', '⛄', '🦌', '🔔'], 4),
+    render: (board, win) => pictureMemory(board, win, 8, 4),
   },
 
   // ---------- Очень сложные ----------
@@ -476,6 +476,11 @@ const PUZZLES = [
     level: 'expert', title: 'Выключи свет',
     task: 'Нажатие переключает лампочку и её соседей сверху, снизу, слева и справа. Выключи все лампочки!',
     render: (board, win) => lightsPuzzle(board, win, 4, 5),
+  },
+  {
+    level: 'expert', title: 'Найди пары',
+    task: '10 пар — все картинки сразу! Настоящая тренировка памяти.',
+    render: (board, win) => pictureMemory(board, win, 10, 5),
   },
   {
     level: 'expert', title: 'Пятнашки 4×4',
@@ -558,8 +563,7 @@ function lightsPuzzle(board, win, size, presses) {
   draw();
 }
 
-// ---------- Угадай картинку ----------
-// Картинка закрыта плитками, они открываются по одной. Угадай как можно раньше!
+// ---------- Картинки для «Найди пары» (5-е задание на каждом уровне) ----------
 // Чтобы добавить картинку — допиши строку: { pic: 'эмодзи', name: 'Название' }
 const PICTURES = [
   { pic: '🐘', name: 'Слон' },
@@ -573,68 +577,23 @@ const PICTURES = [
   { pic: '🐢', name: 'Черепаха' },
   { pic: '🏰', name: 'Замок' },
 ];
-const REVEAL_EVERY_MS = 1500; // как часто открывается плитка
 
-function pictureGuess(board, win, item) {
-  const wrap = document.createElement('div');
-  wrap.className = 'picWrap';
-  wrap.innerHTML = `<div class="picEmoji">${item.pic}</div><div class="picCover"></div>`;
-  board.appendChild(wrap);
-  const cover = wrap.querySelector('.picCover');
-  const tiles = [...Array(9)].map(() => {
-    const t = document.createElement('div');
-    t.textContent = '?';
-    cover.appendChild(t);
-    return t;
-  });
-  let order = shuffle([...tiles.keys()]), done = false;
-  const openOne = () => { const i = order.pop(); if (i !== undefined) tiles[i].classList.add('gone'); };
-  const openAll = () => { while (order.length) openOne(); };
-
-  const timer = setInterval(() => {
-    if (!wrap.isConnected || done) return clearInterval(timer);   // ушли с этой картинки
-    if (!document.getElementById('puzzles').classList.contains('active') || document.hidden) return;
-    openOne();
-  }, REVEAL_EVERY_MS);
-
-  const others = shuffle(PICTURES.filter(p => p !== item)).slice(0, 3).map(p => p.name);
-  const answers = document.createElement('div');
-  answers.className = 'picAnswers';
-  board.appendChild(answers);
-  shuffle([item.name, ...others]).forEach(name => {
-    const b = document.createElement('button');
-    b.className = 'pzItem text';
-    b.textContent = name;
-    b.onclick = () => {
-      if (done) return;
-      if (name === item.name) {
-        done = true;
-        const closed = order.length;   // сколько плиток ещё было закрыто
-        openAll();
-        b.classList.add('good');
-        win();
-        if (!pzMsg.textContent.startsWith('🏆')) pzMsg.textContent = closed >= 6 ? '🦅 Орлиный глаз! Угадал почти сразу!'
-                          : closed >= 3 ? '🎉 Отлично! Быстро угадал!'
-                          : '🎉 Угадал! Это ' + item.name.toLowerCase() + '!';
-      } else {
-        b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad');
-        if (navigator.vibrate) navigator.vibrate(80);
-        openOne(); openOne();          // ошибка — открываем подсказку
-      }
-    };
-    answers.appendChild(b);
-  });
+// «Найди пары» с картинками: pairs — сколько пар, cols — сколько столбиков.
+// Каждый раз берутся случайные картинки из PICTURES.
+function pictureMemory(board, win, pairs, cols) {
+  const pics = shuffle(PICTURES).slice(0, pairs).map(p => p.pic);
+  memoryPuzzle(board, win, pics, cols);
 }
 
-PICTURES.forEach(item => PUZZLES.push({
-  level: 'pictures', title: 'Угадай картинку',
-  task: '', // заголовок «Угадай картинку» уже всё объясняет — экономим место
-  render: (board, win) => pictureGuess(board, win, item),
-}));
-
-const LEVEL_NAMES = { easy: 'Лёгкие', medium: 'Средние', hard: 'Сложные', expert: 'Очень сложные', pictures: '🖼️ Угадай картинку' };
+const LEVEL_NAMES = { easy: 'Лёгкие', medium: 'Средние', hard: 'Сложные', expert: 'Очень сложные' };
 let pzIndex = 0;
 let pzSolved = JSON.parse(localStorage.getItem('pzSolved') || '[]');
+// Порядок заданий в «Очень сложных» поменялся — сбрасываем отметки начиная с 5-го задания этого уровня
+if (localStorage.getItem('pzVersion') !== '2') {
+  pzSolved = pzSolved.filter(i => i < 19);
+  localStorage.setItem('pzSolved', JSON.stringify(pzSolved));
+  localStorage.setItem('pzVersion', '2');
+}
 const pzBoard = document.getElementById('pzBoard');
 const pzMsg = document.getElementById('pzMsg');
 const PRAISE = ['Молодец!', 'Отлично!', 'Супер!', 'Ты гений!', 'Здорово!'];
@@ -655,9 +614,7 @@ function showPuzzle(i) {
     say(praise);
     if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
     if (!pzSolved.includes(pzIndex)) { pzSolved.push(pzIndex); localStorage.setItem('pzSolved', JSON.stringify(pzSolved)); }
-    if (group.every(j => pzSolved.includes(j))) pzMsg.textContent = p.level === 'pictures'
-      ? '🏆 Ты угадал все картинки!'
-      : `🏆 Ты решил все ${LEVEL_NAMES[p.level].toLowerCase()} головоломки!`;
+    if (group.every(j => pzSolved.includes(j))) pzMsg.textContent = `🏆 Ты решил все ${LEVEL_NAMES[p.level].toLowerCase()} головоломки!`;
     drawLevels();
   });
   drawLevels();
