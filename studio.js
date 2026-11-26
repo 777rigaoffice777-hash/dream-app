@@ -1,4 +1,4 @@
-/* build 36 */
+/* build 37 */
 // ===== 3D-мастерская и вкладка «Продукты» =====
 // Объект собирается из фигур. Каждую фигуру можно двигать пальцем, красить,
 // менять размер и поворачивать. Готовый объект сохраняется в «Продукты».
@@ -187,28 +187,53 @@ function makeStage(container) {
   return { renderer, scene, camera, controls };
 }
 
-// Создаёт 3D-фигуру по описанию (тип, цвет, размер, поворот, место)
-function buildMesh(data) {
-  const def = SHAPES3D[data.type] || SHAPES3D.cube;
+// ---------- Как из описания получается 3D ----------
+// Отдельная фигура: { type: 'cube', color, finish, x, z, lift, s, sy, rx, ry, rz }
+// Объединённый объект: { type: 'group', children: [...], x, z, lift, s, sy, rx, ry, rz }
+//   у каждой части в children есть m — где она стоит внутри объекта (матрица из 16 чисел)
+function styleMesh(mesh) {
+  const d = mesh.userData.data;
+  mesh.material.color.set(d.color);
+  Object.assign(mesh.material, FINISH[d.finish] || FINISH.gloss);
+}
+function makeShapeMesh(d) {
+  const def = SHAPES3D[d.type] || SHAPES3D.cube;
   const mesh = new THREE.Mesh(def.make(), new THREE.MeshStandardMaterial({ flatShading: !!def.flat, side: THREE.DoubleSide }));
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-  mesh.userData.data = data;
-  applyData(mesh);
+  mesh.userData.data = d;
+  styleMesh(mesh);
   return mesh;
 }
-function applyData(mesh) {
-  const d = mesh.userData.data, rad = THREE.MathUtils.degToRad;
-  mesh.material.color.set(d.color);
-  Object.assign(mesh.material, FINISH[d.finish] || FINISH.gloss);
-  mesh.scale.set(d.s, d.s * d.sy, d.s);
-  mesh.rotation.set(rad(d.rx), rad(d.ry), rad(d.rz));
-  mesh.position.set(d.x, 0, d.z);
-  mesh.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(mesh);
-  mesh.position.y = d.lift - box.min.y; // ставим на пол (или на высоту «Поднять»)
+function buildGroupNode(d) {
+  const g = new THREE.Group();
+  g.userData.data = d;
+  d.children.forEach(c => {
+    const part = c.type === 'group' ? buildGroupNode(c) : makeShapeMesh(c);
+    new THREE.Matrix4().fromArray(c.m).decompose(part.position, part.quaternion, part.scale);
+    g.add(part);
+  });
+  return g;
 }
-function disposeMesh(mesh) { mesh.geometry.dispose(); mesh.material.dispose(); }
+// Создаёт фигуру или объединённый объект и ставит его на сцену по описанию
+function buildMesh(data) {
+  const node = data.type === 'group' ? buildGroupNode(data) : makeShapeMesh(data);
+  applyData(node);
+  return node;
+}
+function applyData(node) {
+  const d = node.userData.data, rad = THREE.MathUtils.degToRad;
+  if (node.isMesh) styleMesh(node);
+  node.scale.set(d.s, d.s * d.sy, d.s);
+  node.rotation.set(rad(d.rx), rad(d.ry), rad(d.rz));
+  node.position.set(d.x, 0, d.z);
+  node.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(node);
+  node.position.y = d.lift - box.min.y; // ставим на пол (или на высоту «Поднять»)
+}
+// Все фигуры внутри объекта (для отдельной фигуры — она сама)
+function meshesOf(node) { const list = []; node.traverse(o => { if (o.isMesh) list.push(o); }); return list; }
+function disposeMesh(node) { meshesOf(node).forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
 
 // Наводит камеру так, чтобы все фигуры были видны целиком
 function fitCamera(st, list) {
@@ -331,6 +356,7 @@ iconRenderer.dispose();
 iconRenderer.forceContextLoss(); // освобождаем видеокарту — картинки уже нарисованы
 
 function addObject(type) {
+  if (mergeSet) endMerge();
   if (objects.length >= MAX_OBJECTS) return showToast('Больше ' + MAX_OBJECTS + ' фигур нельзя');
   const data = {
     type, color: PALETTE[Math.floor(Math.random() * 9)], finish: 'gloss',
@@ -345,16 +371,19 @@ function addObject(type) {
   saveDraft();
 }
 
+const glow = (node, color) => meshesOf(node).forEach(m => m.material.emissive.set(color));
 function select(mesh) {
-  if (selected) selected.material.emissive.set(0x000000);
+  if (selected) glow(selected, 0x000000);
   selected = mesh;
-  if (mesh) mesh.material.emissive.set(0x1a1a2e);
+  if (mesh) glow(mesh, 0x1a1a2e);
   panel.hidden = !mesh;
+  document.getElementById('stUnlink').hidden = !(mesh && mesh.isGroup);
   updateRing();
   syncPanel();
-  hint.textContent = objects.length
-    ? (mesh ? 'Тащи фигуру пальцем, чтобы подвинуть' : 'Нажми на фигуру, чтобы её выбрать. Крути сцену пальцем')
-    : 'Добавь фигуру сверху 👆';
+  hint.textContent = !objects.length ? 'Добавь фигуру сверху 👆'
+    : !mesh ? 'Нажми на фигуру, чтобы её выбрать. Крути сцену пальцем'
+    : mesh.isGroup ? 'Это объединённый объект. ✂ — разъединить'
+    : 'Тащи фигуру пальцем. 🔗 — объединить с другими';
 }
 
 // ---------- Панель настроек выбранной фигуры ----------
@@ -375,6 +404,11 @@ panel.querySelectorAll('.stTabs [data-tab]').forEach(b => b.onclick = () => {
 
 function change(patch) {
   if (!selected) return;
+  patch = { ...patch };
+  // Цвет и отделка — у каждой фигуры внутри объекта (у объединённого — у всех сразу)
+  const look = {};
+  ['color', 'finish'].forEach(k => { if (k in patch) { look[k] = patch[k]; delete patch[k]; } });
+  if (Object.keys(look).length) meshesOf(selected).forEach(m => { Object.assign(m.userData.data, look); styleMesh(m); });
   Object.assign(selected.userData.data, patch);
   applyData(selected);
   updateRing();
@@ -383,15 +417,101 @@ function change(patch) {
 }
 function syncPanel() {
   if (!selected) return;
-  const d = selected.userData.data;
-  colorsBox.querySelectorAll('button').forEach(b => b.classList.toggle('sel', b.dataset.color === d.color));
-  panel.querySelectorAll('[data-finish]').forEach(b => b.classList.toggle('sel', b.dataset.finish === d.finish));
+  const d = selected.userData.data, look = meshesOf(selected)[0].userData.data;
+  colorsBox.querySelectorAll('button').forEach(b => b.classList.toggle('sel', b.dataset.color === look.color));
+  panel.querySelectorAll('[data-finish]').forEach(b => b.classList.toggle('sel', b.dataset.finish === look.finish));
   panel.querySelectorAll('input[type=range]').forEach(inp => inp.value = d[inp.dataset.k]);
 }
 
+// ---------- Объединить и разъединить ----------
+const mergeBar = document.getElementById('stMergeBar');
+let mergeSet = null; // какие фигуры выбраны для объединения
+const MERGE_GLOW = 0x0050c8;
+
+function startMerge() {
+  if (!selected) return;
+  const first = selected;
+  select(null);
+  mergeSet = new Set([first]);
+  glow(first, MERGE_GLOW);
+  updateMergeBar();
+}
+function toggleMerge(node) {
+  if (mergeSet.has(node)) { mergeSet.delete(node); glow(node, 0x000000); }
+  else { mergeSet.add(node); glow(node, MERGE_GLOW); }
+  sfx('pop');
+  updateMergeBar();
+}
+function endMerge() {
+  if (mergeSet) mergeSet.forEach(n => glow(n, 0x000000));
+  mergeSet = null;
+  updateMergeBar();
+}
+function updateMergeBar() {
+  mergeBar.hidden = !mergeSet;
+  if (!mergeSet) return;
+  document.getElementById('stMergeCount').textContent = mergeSet.size;
+  document.getElementById('stMergeOk').disabled = mergeSet.size < 2;
+  hint.textContent = 'Нажимай на фигуры, которые хочешь соединить';
+}
+
+// Несколько фигур → один объект. Каждая часть запоминает, где она стоит внутри объекта
+function mergeNodes(list) {
+  const box = new THREE.Box3();
+  list.forEach(n => { n.updateMatrixWorld(true); box.expandByObject(n); });
+  const cx = (box.min.x + box.max.x) / 2, cz = (box.min.z + box.max.z) / 2;
+  const toLocal = new THREE.Matrix4().makeTranslation(-cx, 0, -cz);
+  const children = list.map(n => ({ ...structuredClone(n.userData.data), m: toLocal.clone().multiply(n.matrixWorld).toArray() }));
+  list.forEach(n => { stage.scene.remove(n); disposeMesh(n); });
+  objects = objects.filter(o => !list.includes(o));
+  const group = buildMesh({ type: 'group', children, x: +cx.toFixed(3), z: +cz.toFixed(3),
+                            lift: Math.max(0, +box.min.y.toFixed(3)), s: 1, sy: 1, rx: 0, ry: 0, rz: 0 });
+  stage.scene.add(group);
+  objects.push(group);
+  select(group);
+  sfx('win');
+  showToast('🔗 Объединено: ' + list.length);
+  saveDraft();
+}
+
+// Объект → снова отдельные части, каждая остаётся на своём месте
+function unmerge(group) {
+  group.updateMatrixWorld(true);
+  const deg = THREE.MathUtils.radToDeg;
+  const parts = group.children.map(c => {
+    const pos = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
+    c.matrixWorld.decompose(pos, q, sc);
+    const e = new THREE.Euler().setFromQuaternion(q, 'XYZ');
+    const d = { ...structuredClone(c.userData.data),
+      x: +pos.x.toFixed(3), z: +pos.z.toFixed(3),
+      lift: Math.max(0, +new THREE.Box3().setFromObject(c).min.y.toFixed(3)),
+      s: +sc.x.toFixed(3), sy: +(sc.y / sc.x).toFixed(3),
+      rx: Math.round(deg(e.x)), ry: Math.round((deg(e.y) + 360) % 360), rz: Math.round(deg(e.z)) };
+    delete d.m;
+    return d;
+  });
+  stage.scene.remove(group); disposeMesh(group);
+  objects = objects.filter(o => o !== group);
+  parts.forEach(d => { const n = buildMesh(d); stage.scene.add(n); objects.push(n); });
+  select(null);
+  sfx('pop');
+  showToast('✂ Разъединено: ' + parts.length);
+  saveDraft();
+}
+
+document.getElementById('stLink').onclick = startMerge;
+document.getElementById('stUnlink').onclick = () => { if (selected && selected.isGroup) unmerge(selected); };
+document.getElementById('stMergeOk').onclick = () => {
+  if (!mergeSet || mergeSet.size < 2) return;
+  const list = [...mergeSet];
+  endMerge();
+  mergeNodes(list);
+};
+document.getElementById('stMergeCancel').onclick = () => { endMerge(); select(null); };
+
 document.getElementById('stCopy').onclick = () => {
   if (!selected || objects.length >= MAX_OBJECTS) return;
-  const data = { ...selected.userData.data, x: Math.min(5, selected.userData.data.x + 0.9) };
+  const data = { ...structuredClone(selected.userData.data), x: Math.min(5, selected.userData.data.x + 0.9) };
   const mesh = buildMesh(data);
   stage.scene.add(mesh); objects.push(mesh);
   select(mesh); sfx('pop'); saveDraft();
@@ -436,12 +556,17 @@ function floorPoint() { const p = new THREE.Vector3(); return raycaster.ray.inte
 view.addEventListener('pointerdown', e => {
   if (e.target !== stage.renderer.domElement || drag) return;
   setPointer(e);
-  const hit = raycaster.intersectObjects(objects)[0];
-  if (hit) {
+  const hit = raycaster.intersectObjects(objects, true)[0];
+  // Попали в часть объединённого объекта — берём весь объект
+  let node = hit && hit.object;
+  while (node && !objects.includes(node)) node = node.parent;
+  if (node && mergeSet) {          // режим объединения: нажатие добавляет или убирает фигуру
+    toggleMerge(node);
+  } else if (node) {
     stage.controls.enabled = false;
-    select(hit.object);
+    select(node);
     const p = floorPoint() || hit.point;
-    drag = { id: e.pointerId, dx: hit.object.userData.data.x - p.x, dz: hit.object.userData.data.z - p.z, moved: false };
+    drag = { id: e.pointerId, dx: node.userData.data.x - p.x, dz: node.userData.data.z - p.z, moved: false };
   } else {
     tapStart = { x: e.clientX, y: e.clientY };
   }
@@ -464,7 +589,7 @@ window.addEventListener('pointerup', e => {
     drag = null;
     stage.controls.enabled = true;
     saveDraft();
-  } else if (tapStart && Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) < 6) {
+  } else if (tapStart && !mergeSet && Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) < 6) {
     select(null); // просто нажали на пустое место — снять выбор
   }
   tapStart = null;
@@ -475,6 +600,7 @@ function saveDraft() {
   localStorage.setItem('studioDraft', JSON.stringify({ editingId, objects: objects.map(o => o.userData.data) }));
 }
 function loadObjects(list) {
+  if (mergeSet) endMerge();
   objects.forEach(o => { stage.scene.remove(o); disposeMesh(o); });
   objects = list.map(d => { const m = buildMesh({ ...d }); stage.scene.add(m); return m; });
   selected = null;
@@ -509,6 +635,7 @@ function makeThumb() {
 const modal = document.getElementById('stModal');
 const nameInput = document.getElementById('stName');
 document.getElementById('stSave').onclick = () => {
+  if (mergeSet) endMerge();
   if (!objects.length) return showToast('Сначала добавь фигуры 🙂');
   const old = getProducts().find(p => p.id === editingId);
   nameInput.value = old ? old.name : 'Мой объект ' + (getProducts().length + 1);

@@ -382,3 +382,22 @@ nav button { flex: 1 0 auto; min-width: 54px; }
   font-size: .45rem; font-weight: 800; color: var(--accent); text-align: center;
   padding: 2px; border-left: 2px solid var(--accent); margin-left: 4px;
 }
+
+/* 3D: объединение фигур */
+.stTabs button[data-tab] { display: flex; flex-direction: column; align-items: center; font-size: .8rem; padding: 3px 2px; line-height: 1.1; }
+.stTabs button[data-tab] small { font-size: .42rem; font-weight: 600; }
+.stTabs #stCopy, .stTabs #stDel, .stTabs #stLink, .stTabs #stUnlink { flex: 0 0 2.2em; font-size: .8rem; padding: 0; }
+.stTabs #stLink { background: #2b6cb0; }
+.stTabs #stUnlink { background: #b7791f; }
+.stTabs [hidden] { display: none; }
+.stMergeBar {
+  position: absolute; top: 58px; left: 8px; right: 8px; z-index: 3;
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+  background: #2b6cb0; color: #fff; border-radius: 14px; font-size: .6rem; font-weight: 700;
+  box-shadow: 0 6px 16px rgba(0,0,0,.25);
+}
+.stMergeBar[hidden] { display: none; }
+.stMergeBar span { flex: 1; }
+.stMergeBar button { font-size: .6rem; padding: 6px 10px; }
+.stMergeBar button:disabled { opacity: .45; }
+#stMergeCancel { background: rgba(255,255,255,.9); }

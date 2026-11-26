@@ -7,11 +7,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
-  <meta name="app-version" content="36">
+  <meta name="app-version" content="37">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=36">
+  <link rel="stylesheet" href="style.css?v=37">
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
   </script>
@@ -173,6 +173,11 @@
           <button id="stSave" title="Сохранить в Продукты">💾</button>
         </div>
         <div class="stHint" id="stHint">Добавь фигуру сверху 👆</div>
+        <div class="stMergeBar" id="stMergeBar" hidden>
+          <span>🔗 Выбрано: <b id="stMergeCount">1</b></span>
+          <button id="stMergeOk">✅ Объединить</button>
+          <button id="stMergeCancel">✕</button>
+        </div>
         <div class="stLift" id="stLift" hidden>
           <button id="stUp" title="Поднять">⬆</button>
           <span id="stLiftVal">0.0</span>
@@ -182,9 +187,11 @@
       </div>
       <div class="stPanel" id="stPanel" hidden>
         <div class="stTabs">
-          <button data-tab="color" class="active">🎨 Цвет</button>
-          <button data-tab="size">📏 Размер</button>
-          <button data-tab="turn">↻ Поворот</button>
+          <button data-tab="color" class="active">🎨<small>Цвет</small></button>
+          <button data-tab="size">📏<small>Размер</small></button>
+          <button data-tab="turn">↻<small>Поворот</small></button>
+          <button id="stLink" title="Объединить">🔗</button>
+          <button id="stUnlink" title="Разъединить" hidden>✂</button>
           <button id="stCopy" title="Копия">📋</button>
           <button id="stDel" title="Удалить">🗑</button>
         </div>
@@ -277,7 +284,7 @@
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=36"></script>
-  <script type="module" src="studio.js?v=36"></script>
+  <script src="app.js?v=37"></script>
+  <script type="module" src="studio.js?v=37"></script>
 </body>
 </html>
