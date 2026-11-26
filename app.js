@@ -613,7 +613,7 @@ function pictureGuess(board, win, item) {
         openAll();
         b.classList.add('good');
         win();
-        pzMsg.textContent = closed >= 6 ? '🦅 Орлиный глаз! Угадал почти сразу!'
+        if (!pzMsg.textContent.startsWith('🏆')) pzMsg.textContent = closed >= 6 ? '🦅 Орлиный глаз! Угадал почти сразу!'
                           : closed >= 3 ? '🎉 Отлично! Быстро угадал!'
                           : '🎉 Угадал! Это ' + item.name.toLowerCase() + '!';
       } else {
