@@ -967,7 +967,35 @@ const TRACKS = {
   },
 };
 // Какая музыка в каком режиме. null — без музыки (там говорит голос)
-const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: null, moroz: null };
+// Бесконечная — сочиняется сама на ходу: аккорды идут по кругу, а мелодия каждый раз новая,
+// поэтому она никогда не заканчивается и не повторяется
+TRACKS.endless = {
+  bpm: 120, wave: 'square', drums: true, generate: true,
+  chords: [  // ля-минор, фа, до, соль — по одному аккорду на такт (8 шагов)
+    { bass: 45, notes: [69, 72, 76, 81] },
+    { bass: 41, notes: [65, 69, 72, 77] },
+    { bass: 48, notes: [67, 72, 76, 79] },
+    { bass: 43, notes: [67, 71, 74, 79] },
+  ],
+  scale: [64, 67, 69, 72, 74, 76, 79, 81, 84], // пентатоника — любые ноты звучат дружно
+};
+let genLast = 72;
+// Какая нота звучит на шаге step бесконечного трека
+function generatedStep(t, step) {
+  const pos = step % 8, chord = t.chords[Math.floor(step / 8) % t.chords.length];
+  let mel = null;
+  if (pos === 0) mel = chord.notes[Math.floor(Math.random() * chord.notes.length)]; // начало такта — нота аккорда
+  else if (Math.random() < 0.7) {                                                     // иногда пауза
+    const i = t.scale.indexOf(t.scale.reduce((a, b) => Math.abs(b - genLast) < Math.abs(a - genLast) ? b : a));
+    const move = [-2, -1, -1, 1, 1, 2][Math.floor(Math.random() * 6)];                // ходим плавно, по соседним нотам
+    mel = t.scale[Math.min(t.scale.length - 1, Math.max(0, i + move))];
+  }
+  if (mel != null) genLast = mel;
+  const bass = pos % 4 === 0 ? chord.bass : pos % 4 === 2 ? chord.bass + 7 : null;
+  return { mel, bass };
+}
+
+const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null };
 const MUSIC_VOLUME = 0.1;
 
 let musicOn = localStorage.getItem('musicOn') !== '0';
@@ -1013,9 +1041,10 @@ setInterval(() => {
   master.gain.setTargetAtTime(talking ? MUSIC_VOLUME * 0.25 : MUSIC_VOLUME, audioCtx.currentTime, 0.1);
   if (nextNoteTime < audioCtx.currentTime) nextNoteTime = audioCtx.currentTime + 0.05;
   while (nextNoteTime < audioCtx.currentTime + 0.15) {
-    const i = musicStep % t.melody.length;
-    if (t.melody[i] != null) playTone(noteHz(t.melody[i]), nextNoteTime, stepDur * 0.9, t.wave, 0.35, master);
-    if (t.bass[i] != null) playTone(noteHz(t.bass[i]), nextNoteTime, t.drums ? stepDur * 1.8 : stepDur * 7, 'triangle', 0.6, master);
+    const i = t.generate ? musicStep % 8 : musicStep % t.melody.length;
+    const { mel, bass } = t.generate ? generatedStep(t, musicStep) : { mel: t.melody[i], bass: t.bass[i] };
+    if (mel != null) playTone(noteHz(mel), nextNoteTime, stepDur * 0.9, t.wave, 0.35, master);
+    if (bass != null) playTone(noteHz(bass), nextNoteTime, t.drums ? stepDur * 1.8 : stepDur * 7, 'triangle', 0.6, master);
     if (t.drums) playDrum(nextNoteTime, i % 4 === 0);
     nextNoteTime += stepDur;
     musicStep++;
