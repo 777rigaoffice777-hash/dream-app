@@ -32,6 +32,8 @@
 а при запуске подтягивается свежая версия. Вручную сохранить: `bash autosave.sh`.
 
 ## Как продолжить на другом компьютере
+Всё о проекте (режимы, правила, что не доделано) — в [CONTEXT.md](CONTEXT.md).
+
 1. Установи [Git](https://git-scm.com), [GitHub CLI](https://cli.github.com) и VS Code с Claude Code.
 2. В терминале:
    ```
