@@ -1,4 +1,4 @@
-/* build 48 */
+/* build 49 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1748,3 +1748,4 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) chec
 setInterval(checkForUpdate, 60000);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+window.APP_OK = true; // для «страховки» в index.html: основной код запустился
