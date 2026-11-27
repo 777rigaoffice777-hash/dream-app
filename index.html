@@ -7,18 +7,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
-  <meta name="app-version" content="45">
+  <meta name="app-version" content="46">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=45">
+  <link rel="stylesheet" href="style.css?v=46">
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
   </script>
 </head>
 <body>
   <header>
-    <div class="titleBox"><h1>✨ Мастерская</h1><small id="appVersion"></small></div>
+    <div class="titleBox"><h1><span id="appEmoji">✨</span> Мастерская</h1><small id="appVersion"></small></div>
     <div class="headBtns">
       <button id="musicBtn" aria-label="Музыка">🎵</button>
       <button id="installBtn" hidden aria-label="Установить приложение" title="Установить приложение">📲</button>
@@ -327,7 +327,41 @@
 
     <!-- Экран 3: Сюда добавляй своё -->
     <section id="lab" class="screen">
-      <h2>Лаборатория</h2>
+      <!-- Конструктор темы: свои цвета и эмодзи -->
+      <h2>🎨 Тема приложения</h2>
+      <div class="thLabel">Темы — нажми, чтобы включить</div>
+      <div id="thList"></div>
+
+      <div class="thLabel">1. Что красим?</div>
+      <div class="thSlots" id="thSlots">
+        <button data-slot="bg" class="sel"><i></i>Фон</button>
+        <button data-slot="bg2"><i></i>Фон 2</button>
+        <button data-slot="card"><i></i>Панели</button>
+        <button data-slot="accent"><i></i>Кнопки</button>
+        <button data-slot="text"><i></i>Текст</button>
+      </div>
+
+      <div class="thLabel">2. Мои цвета — нажми, чтобы покрасить</div>
+      <div class="thItems" id="thColors"></div>
+
+      <div class="thLabel">3. Мои эмодзи</div>
+      <div class="thModes" id="thModes">
+        <button data-mode="title" class="sel">В заголовок</button>
+        <button data-mode="deco">Узор на фоне</button>
+        <button id="thNoDeco">Без узора</button>
+      </div>
+      <div class="thItems" id="thEmojis"></div>
+      <div class="thAddEmoji">
+        <input id="thEmojiInput" maxlength="8" placeholder="🙂" autocomplete="off">
+        <button id="thEmojiAdd">➕ Добавить эмодзи</button>
+      </div>
+
+      <div class="row thActions">
+        <button id="thSave">💾 Сохранить тему</button>
+        <button id="thTrash">🗑 Убирать</button>
+      </div>
+
+      <h2 class="labTitle">Лаборатория</h2>
       <p>Это пустая комната для твоих экспериментов. Открой <code>index.html</code> и <code>app.js</code> и добавь сюда что угодно: игру, калькулятор, музыку…</p>
       <button id="magicBtn" class="big">Нажми меня</button>
       <p id="magicOut"></p>
@@ -350,7 +384,7 @@
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=45"></script>
-  <script type="module" src="studio.js?v=45"></script>
+  <script src="app.js?v=46"></script>
+  <script type="module" src="studio.js?v=46"></script>
 </body>
 </html>

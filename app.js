@@ -1,4 +1,168 @@
-/* build 45 */
+/* build 46 */
+// ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
+// Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
+// Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
+const THEME_PRESETS = [
+  { name: 'Космос',  emoji: '✨', bg: '#1b1440', bg2: '#3a2d8a', card: '#2a2160', accent: '#ffb703', text: '#f4f1ff', deco: '' },
+  { name: 'Океан',   emoji: '🐬', bg: '#03256c', bg2: '#1768ac', card: '#06417a', accent: '#2ec4b6', text: '#f1faff', deco: '🫧🐟' },
+  { name: 'Лес',     emoji: '🌲', bg: '#0f2e1d', bg2: '#2d6a4f', card: '#1b4332', accent: '#95d5b2', text: '#f0fff4', deco: '🍃🍄' },
+  { name: 'Конфета', emoji: '🍭', bg: '#ffd6e8', bg2: '#ffafcc', card: '#ffc8dd', accent: '#ff4d8d', text: '#5a1846', deco: '🍬🧁' },
+  { name: 'Закат',   emoji: '🌅', bg: '#3d0c45', bg2: '#ff7b00', card: '#6a1b4d', accent: '#ffd166', text: '#fff3e6', deco: '' },
+  { name: 'Ночь',    emoji: '🌙', bg: '#000000', bg2: '#1c1c2e', card: '#16161f', accent: '#c0c0ff', text: '#e6e6ff', deco: '⭐' },
+];
+const START_COLORS = ['#ff595e', '#ff924c', '#ffca3a', '#8ac926', '#2ec4b6', '#1982c4', '#6a4c93', '#ff6fb5', '#ffffff', '#111111'];
+const START_EMOJIS = ['✨', '🚀', '🐱', '🌈', '⚽', '🍕', '🦄', '🔥', '🎮', '💎'];
+const MAX_DECO = 4; // сколько разных эмодзи можно рассыпать по фону
+
+let theme = JSON.parse(localStorage.getItem('theme') || 'null') || { ...THEME_PRESETS[0] };
+let myThemes = JSON.parse(localStorage.getItem('myThemes') || '[]');
+let myColors = JSON.parse(localStorage.getItem('myColors') || 'null') || [...START_COLORS];
+let myEmojis = JSON.parse(localStorage.getItem('myEmojis') || 'null') || [...START_EMOJIS];
+const splitEmoji = s => [...new Intl.Segmenter().segment(s || '')].map(x => x.segment).filter(x => x.trim());
+
+// Светлый цвет или тёмный? Нужно, чтобы надписи на кнопках всегда читались
+function isLight(hex) {
+  const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6;
+}
+// Узор: эмодзи, рассыпанные по фону (картинка, нарисованная прямо в коде)
+function decoImage(emojis) {
+  const list = splitEmoji(emojis).slice(0, MAX_DECO);
+  if (!list.length) return 'none';
+  const spots = [[10, 34], [72, 22], [38, 82], [98, 104]];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="130" height="130">${
+    spots.map(([x, y], i) => `<text x="${x}" y="${y}" font-size="24" opacity=".22">${list[i % list.length]}</text>`).join('')}</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+function applyTheme(t) {
+  const root = document.documentElement.style;
+  ['bg', 'bg2', 'card', 'accent', 'text'].forEach(k => root.setProperty('--' + k, t[k]));
+  root.setProperty('--on-accent', isLight(t.accent) ? '#1b1440' : '#ffffff');
+  root.setProperty('--deco', decoImage(t.deco));
+  document.getElementById('appEmoji').textContent = t.emoji || '✨';
+  document.querySelector('meta[name="theme-color"]').content = t.bg;
+}
+function saveTheme() {
+  localStorage.setItem('theme', JSON.stringify(theme));
+  applyTheme(theme);
+  thDraw();
+}
+applyTheme(theme);
+
+// ---------- Конструктор темы во вкладке «Лаба» ----------
+let thSlot = 'bg', thMode = 'title', thTrash = false;
+const sameTheme = (a, b) => ['bg', 'bg2', 'card', 'accent', 'text', 'emoji', 'deco'].every(k => (a[k] || '') === (b[k] || ''));
+
+function thDraw() {
+  // Готовые и мои темы
+  const list = document.getElementById('thList');
+  list.innerHTML = '';
+  [...THEME_PRESETS.map(t => ({ ...t, preset: true })), ...myThemes].forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'thCard' + (sameTheme(t, theme) ? ' sel' : '');
+    b.style.background = `radial-gradient(circle at 20% 0%, ${t.bg2}, ${t.bg} 75%)`;
+    b.style.color = t.text;
+    b.innerHTML = `<span class="thCardEmoji"></span><span class="thCardName"></span><i style="background:${t.accent}"></i>`;
+    b.querySelector('.thCardEmoji').textContent = t.emoji;
+    b.querySelector('.thCardName').textContent = t.name;
+    if (thTrash && !t.preset) b.insertAdjacentHTML('beforeend', '<span class="thDel">✕</span>');
+    b.onclick = () => {
+      if (thTrash) {
+        if (!t.preset && confirm(`Удалить тему «${t.name}»?`)) {
+          myThemes = myThemes.filter(x => x !== t);
+          localStorage.setItem('myThemes', JSON.stringify(myThemes));
+          thDraw();
+        }
+        return;
+      }
+      theme = { ...t }; delete theme.preset;
+      saveTheme();
+    };
+    list.appendChild(b);
+  });
+  // Что красим — с текущими цветами
+  document.querySelectorAll('#thSlots button').forEach(b => {
+    b.classList.toggle('sel', b.dataset.slot === thSlot);
+    b.querySelector('i').style.background = theme[b.dataset.slot];
+  });
+  document.querySelectorAll('#thModes [data-mode]').forEach(b => b.classList.toggle('sel', b.dataset.mode === thMode));
+  // Мои цвета
+  const colors = document.getElementById('thColors');
+  colors.innerHTML = '';
+  myColors.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'thColor' + (theme[thSlot] === c ? ' sel' : '');
+    b.style.background = c;
+    if (thTrash) b.innerHTML = '<span class="thDel">✕</span>';
+    b.onclick = () => {
+      if (thTrash) { myColors = myColors.filter(x => x !== c); localStorage.setItem('myColors', JSON.stringify(myColors)); return thDraw(); }
+      theme[thSlot] = c;
+      saveTheme();
+    };
+    colors.appendChild(b);
+  });
+  // ➕ свой цвет: открывается палитра телефона
+  const add = document.createElement('label');
+  add.className = 'thColor thAdd';
+  add.innerHTML = '➕<input type="color" value="#44aaff">';
+  add.querySelector('input').onchange = e => {
+    const c = e.target.value;
+    if (!myColors.includes(c)) myColors.push(c);
+    localStorage.setItem('myColors', JSON.stringify(myColors));
+    theme[thSlot] = c;           // сразу и покрасим
+    saveTheme();
+  };
+  colors.appendChild(add);
+  // Мои эмодзи
+  const emojis = document.getElementById('thEmojis');
+  emojis.innerHTML = '';
+  const deco = splitEmoji(theme.deco);
+  myEmojis.forEach(em => {
+    const b = document.createElement('button');
+    b.className = 'thEmoji' + ((thMode === 'title' ? theme.emoji === em : deco.includes(em)) ? ' sel' : '');
+    b.textContent = em;
+    if (thTrash) b.insertAdjacentHTML('beforeend', '<span class="thDel">✕</span>');
+    b.onclick = () => {
+      if (thTrash) { myEmojis = myEmojis.filter(x => x !== em); localStorage.setItem('myEmojis', JSON.stringify(myEmojis)); return thDraw(); }
+      if (thMode === 'title') theme.emoji = em;
+      else {
+        const d = splitEmoji(theme.deco);
+        theme.deco = (d.includes(em) ? d.filter(x => x !== em) : [...d, em].slice(-MAX_DECO)).join('');
+      }
+      saveTheme();
+    };
+    emojis.appendChild(b);
+  });
+}
+document.querySelectorAll('#thSlots button').forEach(b => b.onclick = () => { thSlot = b.dataset.slot; thDraw(); });
+document.querySelectorAll('#thModes [data-mode]').forEach(b => b.onclick = () => { thMode = b.dataset.mode; thDraw(); });
+document.getElementById('thNoDeco').onclick = () => { theme.deco = ''; saveTheme(); };
+document.getElementById('thEmojiAdd').onclick = () => {
+  const inp = document.getElementById('thEmojiInput');
+  const list = splitEmoji(inp.value);
+  if (!list.length) return showToast('Вставь эмодзи с клавиатуры 🙂');
+  list.forEach(em => { if (!myEmojis.includes(em)) myEmojis.push(em); });
+  localStorage.setItem('myEmojis', JSON.stringify(myEmojis));
+  inp.value = '';
+  thDraw();
+};
+document.getElementById('thTrash').onclick = e => {
+  thTrash = !thTrash;
+  e.currentTarget.textContent = thTrash ? '✅ Готово' : '🗑 Убирать';
+  if (thTrash) showToast('Нажми на свою тему, цвет или эмодзи, чтобы убрать');
+  thDraw();
+};
+document.getElementById('thSave').onclick = () => {
+  const name = (prompt('Как назовём тему?', 'Моя тема ' + (myThemes.length + 1)) || '').trim();
+  if (!name) return;
+  myThemes.push({ ...theme, name });
+  localStorage.setItem('myThemes', JSON.stringify(myThemes));
+  theme.name = name;
+  saveTheme();
+  showToast('🎨 Тема «' + name + '» сохранена');
+};
+thDraw();
+
 // ===== Переключение экранов =====
 document.querySelectorAll('nav button').forEach(btn => {
   btn.addEventListener('click', () => {

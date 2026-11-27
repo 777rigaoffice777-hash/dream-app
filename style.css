@@ -5,11 +5,14 @@
   --accent: #ffb703;
   --accent2: #8ecae6;
   --text: #f4f1ff;
+  --bg2: #3a2d8a;
+  --on-accent: #1b1440; /* цвет надписей на кнопках — приложение подбирает сам */
+  --deco: none;         /* узор из эмодзи на фоне */
 }
 html, body { margin: 0; height: 100%; }
 html { font-size: 140%; } /* шрифт крупнее на 40% */
 body {
-  background: radial-gradient(circle at 20% 0%, #3a2d8a, var(--bg) 60%);
+  background: var(--deco), radial-gradient(circle at 20% 0%, var(--bg2), var(--bg) 60%);
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   display: flex; flex-direction: column;
@@ -26,7 +29,7 @@ main { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 18px 18px; }
 
 button {
   font: inherit; border: 0; border-radius: 12px; padding: 10px 16px;
-  background: var(--accent); color: #1b1440; font-weight: 600; cursor: pointer;
+  background: var(--accent); color: var(--on-accent); font-weight: 600; cursor: pointer;
 }
 button:active { transform: scale(.96); }
 button.big { font-size: 1.3rem; padding: 18px 28px; }
@@ -185,7 +188,7 @@ main { position: relative; }
   width: 2.2em; height: 2.2em; padding: 0; border-radius: 50%;
   background: var(--card); color: var(--text); font-size: .9rem;
 }
-#pzLevels button.current { background: var(--accent); color: #1b1440; }
+#pzLevels button.current { background: var(--accent); color: var(--on-accent); }
 #pzLevels button.done::after { content: "✓"; font-size: .6em; vertical-align: super; color: #7CFC9A; }
 #pzLevels button.current.done::after { color: #1b7a33; }
 #puzzles h2 { text-align: center; margin-bottom: 6px; }
@@ -209,7 +212,7 @@ main { position: relative; }
 .pz15 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(80vw, 300px); }
 .pz15 button {
   aspect-ratio: 1; font-size: 1.6rem; font-weight: 800; border-radius: 14px;
-  background: var(--accent); color: #1b1440; transition: transform .1s; padding: 0; min-width: 0;
+  background: var(--accent); color: var(--on-accent); transition: transform .1s; padding: 0; min-width: 0;
 }
 .pz15.big { width: min(86vw, 320px); gap: 6px; }
 .pz15.big button { font-size: 1.15rem; border-radius: 10px; }
@@ -258,7 +261,7 @@ code { background: var(--card); padding: 2px 6px; border-radius: 6px; }
 /* Переключатель «Лёгкие / Средние» */
 #pzGroups { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
 #pzGroups button { background: var(--card); color: var(--text); font-size: .7rem; padding: 6px 8px; }
-#pzGroups button.current { background: var(--accent); color: #1b1440; }
+#pzGroups button.current { background: var(--accent); color: var(--on-accent); }
 #pzGroups button:last-child:nth-child(odd) { grid-column: span 2; }
 
 #pzTask:empty { display: none; }
@@ -327,14 +330,14 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 .stPanel { background: var(--card); padding: 8px 10px 10px; flex-shrink: 0; }
 .stTabs { display: flex; gap: 4px; margin-bottom: 8px; }
 .stTabs button { flex: 1; font-size: .55rem; padding: 6px 4px; background: #3a3180; color: var(--text); }
-.stTabs button.active { background: var(--accent); color: #1b1440; }
+.stTabs button.active { background: var(--accent); color: var(--on-accent); }
 .stTabs #stCopy, .stTabs #stDel { flex: 0 0 2.4em; font-size: .8rem; }
 .stColors { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .stColors button { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 3px solid transparent; }
 .stColors button.sel { border-color: #fff; transform: scale(1.15); }
 .stFinish { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
 .stFinish button { font-size: .6rem; padding: 6px 12px; background: #3a3180; color: var(--text); }
-.stFinish button.sel { background: var(--accent); color: #1b1440; }
+.stFinish button.sel { background: var(--accent); color: var(--on-accent); }
 .stTab label { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .6rem; margin: 4px 0; }
 .stTab input[type=range] { flex: 1; max-width: 60%; accent-color: var(--accent); }
 .stModal { position: absolute; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 10; }
@@ -367,7 +370,7 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 .stLift[hidden] { display: none; }
 .stLift button {
   width: 2.3em; height: 2.3em; padding: 0; border-radius: 14px; font-size: 1rem;
-  background: var(--accent); color: #1b1440; touch-action: none; user-select: none; -webkit-user-select: none;
+  background: var(--accent); color: var(--on-accent); touch-action: none; user-select: none; -webkit-user-select: none;
 }
 .stLift #stFloor { background: #c8d6f0; font-size: .85rem; }
 #stLiftVal { font-size: .6rem; font-weight: 800; color: #1b1440; }
@@ -470,10 +473,42 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 #sbLabel, #sbText { flex: 1; width: 100%; }
 .sbKinds { display: flex; gap: 6px; }
 .sbKinds button { flex: 1; font-size: .6rem; background: #3a3180; color: var(--text); }
-.sbKinds button.sel { background: var(--accent); color: #1b1440; }
+.sbKinds button.sel { background: var(--accent); color: var(--on-accent); }
 .sbKind { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .sbKind[hidden] { display: none; }
 .sbKind button { font-size: .65rem; }
 #sbRecInfo { font-size: .6rem; opacity: .85; }
 .sbActions { justify-content: flex-end; }
 .sbActions button { font-size: .7rem; }
+
+/* ===== Тема приложения (вкладка «Лаба») ===== */
+.thLabel { font-size: .65rem; font-weight: 700; opacity: .85; margin: 16px 0 6px; }
+#thList { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: none; }
+#thList::-webkit-scrollbar { display: none; }
+.thCard {
+  position: relative; flex: 0 0 auto; width: 84px; height: 84px; padding: 6px; border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.25);
+}
+.thCard.sel { box-shadow: inset 0 0 0 3px var(--accent), 0 0 0 3px var(--accent); }
+.thCardEmoji { font-size: 1.3rem; }
+.thCardName { font-size: .5rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.thCard i { width: 26px; height: 6px; border-radius: 3px; }
+.thSlots, .thModes { display: flex; flex-wrap: wrap; gap: 6px; }
+.thSlots button, .thModes button { font-size: .55rem; padding: 6px 10px; background: var(--card); color: var(--text); display: flex; align-items: center; gap: 6px; }
+.thSlots button i { width: 16px; height: 16px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.6); }
+.thSlots button.sel, .thModes button.sel { background: var(--accent); color: var(--on-accent); }
+.thItems { display: flex; flex-wrap: wrap; gap: 8px; }
+.thColor { position: relative; width: 40px; height: 40px; padding: 0; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
+.thColor.sel { box-shadow: 0 0 0 3px var(--text); transform: scale(1.1); }
+.thAdd { display: flex; align-items: center; justify-content: center; background: var(--card); color: var(--text); font-size: .9rem; cursor: pointer; overflow: hidden; }
+.thAdd input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.thEmoji { position: relative; width: 44px; height: 44px; padding: 0; font-size: 1.3rem; background: var(--card); border-radius: 12px; }
+.thEmoji.sel { background: var(--accent); }
+.thDel { position: absolute; top: -6px; right: -6px; width: 1.4em; height: 1.4em; border-radius: 50%; background: #fff; color: #c00; font-size: .55rem; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.thAddEmoji { display: flex; gap: 8px; margin-top: 8px; }
+.thAddEmoji input { width: 4em; font: inherit; font-size: 1rem; text-align: center; padding: 8px; border-radius: 12px; border: 0; background: var(--card); color: var(--text); }
+.thAddEmoji button { font-size: .6rem; }
+.thActions { margin-top: 18px; }
+.thActions button { font-size: .7rem; }
+.labTitle { margin-top: 30px; }
