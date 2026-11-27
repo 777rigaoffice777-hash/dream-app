@@ -1,4 +1,4 @@
-/* build 49 */
+/* build 50 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1417,6 +1417,160 @@ document.getElementById('sbSave').onclick = () => {
 };
 sbDraw();
 
+// ===== Стаканчики: под одним из них шарик, они перемешиваются — угадай где =====
+const CUPS_MIN = 2, CUPS_MAX = 15;
+const SHUFFLE_MS = 7000;          // сколько длится перемешивание
+const SWAP_MS = 420;              // сколько длится одна перестановка
+const SHOW_BALL_MS = 1400;        // сколько показываем шарик перед перемешиванием
+// Стаканчик и шарик нарисованы прямо в коде (SVG)
+const CUP_SVG = `<svg viewBox="0 0 100 110"><defs><linearGradient id="cupG" x1="0" x2="1">
+  <stop offset="0" stop-color="#b3141c"/><stop offset=".45" stop-color="#ff4a4f"/><stop offset="1" stop-color="#a01018"/></linearGradient></defs>
+  <path d="M22 8 H78 L94 100 Q50 112 6 100 Z" fill="url(#cupG)"/>
+  <ellipse cx="50" cy="8" rx="28" ry="6" fill="#d62a31"/>
+  <path d="M15 52 Q50 60 85 52 L87 64 Q50 72 13 64 Z" fill="#fff" opacity=".9"/>
+  <path d="M10 82 Q50 90 90 82 L91 90 Q50 98 9 90 Z" fill="#fff" opacity=".6"/>
+  <ellipse cx="50" cy="100" rx="44" ry="7" fill="#7d0a10"/></svg>`;
+
+let cpN = Math.min(CUPS_MAX, Math.max(CUPS_MIN, Number(localStorage.getItem('cupsN')) || 3));
+let cpScore = JSON.parse(localStorage.getItem('cupsScore') || '{"win":0,"total":0}');
+let cpCups = [], cpSlots = [], cpBall = -1, cpState = 'idle'; // idle → show → shuffle → guess → done
+const cpStage = document.getElementById('cpStage'), cpMsg = document.getElementById('cpMsg');
+
+// Где стоят места для стаканчиков: ряды по 5 (или меньше), всё помещается на экран
+function cpLayout() {
+  const W = cpStage.clientWidth || 340;
+  const cols = cpN <= 5 ? cpN : 5, rows = Math.ceil(cpN / cols);
+  const size = Math.min(96, (W - 10) / cols - 10);
+  const rowH = size * 1.45;
+  cpStage.style.height = rows * rowH + 20 + 'px';
+  cpSlots = [...Array(cpN)].map((_, i) => {
+    const r = Math.floor(i / cols), inRow = Math.min(cols, cpN - r * cols), c = i % cols;
+    const rowW = inRow * (size + 10) - 10;
+    return { x: (W - rowW) / 2 + c * (size + 10), y: 20 + r * rowH, size };
+  });
+}
+const cpPlace = (cup, slot) => {
+  const s = cpSlots[slot];
+  cup.el.style.width = s.size + 'px';
+  cup.el.style.transform = `translate(${s.x}px, ${s.y}px)`;
+};
+
+function cpBuild() {
+  cpLayout();
+  cpStage.innerHTML = '';
+  cpCups = [...Array(cpN)].map((_, i) => {
+    const el = document.createElement('div');
+    el.className = 'cpCup';
+    el.innerHTML = `<div class="cpBall"></div><div class="cpBody">${CUP_SVG}</div>`;
+    const cup = { el, slot: i, id: i };
+    el.addEventListener('click', () => cpGuess(cup));
+    cpStage.appendChild(el);
+    cpPlace(cup, i);
+    return cup;
+  });
+  cpBall = -1;
+  document.getElementById('cpN').textContent = cpN;
+  document.getElementById('cpScore').textContent = `Угадано ${cpScore.win} из ${cpScore.total}`;
+}
+const cpLift = (cup, up) => cup.el.classList.toggle('up', up);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+// Меняем местами два стаканчика: один едет дугой сверху, другой снизу
+function cpSwap(a, b, ms) {
+  const sa = cpSlots[a.slot], sb = cpSlots[b.slot];
+  const arc = Math.max(30, sa.size * 0.55);
+  const move = (cup, from, to, dir) => cup.el.animate([
+    { transform: `translate(${from.x}px, ${from.y}px)` },
+    { transform: `translate(${(from.x + to.x) / 2}px, ${(from.y + to.y) / 2 + dir * arc}px)` },
+    { transform: `translate(${to.x}px, ${to.y}px)` },
+  ], { duration: ms, easing: 'ease-in-out' });
+  const anims = [move(a, sa, sb, -1), move(b, sb, sa, 1)];
+  [a.slot, b.slot] = [b.slot, a.slot];
+  cpPlace(a, a.slot); cpPlace(b, b.slot);
+  return Promise.all(anims.map(x => x.finished.catch(() => {})));
+}
+
+async function cpPlay() {
+  if (cpState === 'show' || cpState === 'shuffle') return;
+  cpBuild();
+  const startBtn = document.getElementById('cpStart');
+  startBtn.disabled = true;
+  // 1. Прячем шарик ровно под ОДИН случайный стаканчик и показываем его
+  cpBall = Math.floor(Math.random() * cpN);
+  cpCups[cpBall].el.classList.add('hasBall');
+  cpState = 'show';
+  cpMsg.textContent = '👀 Запомни, где шарик!';
+  await wait(250);
+  cpLift(cpCups[cpBall], true);
+  await wait(SHOW_BALL_MS);
+  cpLift(cpCups[cpBall], false);
+  await wait(450);
+  // 2. Перемешиваем ровно 7 секунд
+  cpState = 'shuffle';
+  const t0 = Date.now();
+  const timer = setInterval(() => {
+    const left = Math.max(0, Math.ceil((SHUFFLE_MS - (Date.now() - t0)) / 1000));
+    cpMsg.textContent = `🔀 Перемешиваю… ${left}`;
+  }, 100);
+  while (Date.now() - t0 < SHUFFLE_MS - SWAP_MS / 2) {
+    const ms = Math.min(SWAP_MS, SHUFFLE_MS - (Date.now() - t0));
+    if (ms < 120) break;
+    const i = Math.floor(Math.random() * cpN);
+    let j = Math.floor(Math.random() * (cpN - 1)); if (j >= i) j++;
+    await cpSwap(cpCups[i], cpCups[j], ms);
+  }
+  const rest = SHUFFLE_MS - (Date.now() - t0);
+  if (rest > 0) await wait(rest);
+  clearInterval(timer);
+  // 3. Угадывай
+  cpState = 'guess';
+  cpMsg.textContent = '🤔 Где шарик? Нажми на стаканчик';
+  cpStage.classList.add('pick');
+  startBtn.disabled = false;
+  startBtn.textContent = '▶ Ещё раз';
+}
+
+async function cpGuess(cup) {
+  if (cpState !== 'guess') return;
+  cpState = 'done';
+  cpStage.classList.remove('pick');
+  cpLift(cup, true);
+  const right = cup.id === cpBall;
+  cpScore.total++;
+  if (right) cpScore.win++;
+  localStorage.setItem('cupsScore', JSON.stringify(cpScore));
+  document.getElementById('cpScore').textContent = `Угадано ${cpScore.win} из ${cpScore.total}`;
+  if (right) {
+    cpMsg.textContent = '🎉 Угадал! Шарик здесь!';
+    sfx('win'); say('Угадал!');
+    if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+  } else {
+    cpMsg.textContent = '😅 Пусто! Шарик был вот тут';
+    sfx('wrong');
+    if (navigator.vibrate) navigator.vibrate(120);
+    await wait(600);
+    cpLift(cpCups[cpBall], true);
+  }
+}
+
+function cpSetN(n) {
+  if (cpState === 'show' || cpState === 'shuffle') return;
+  cpN = Math.min(CUPS_MAX, Math.max(CUPS_MIN, n));
+  localStorage.setItem('cupsN', cpN);
+  cpState = 'idle';
+  cpMsg.textContent = 'Нажми «Старт» — покажу, где шарик';
+  document.getElementById('cpStart').textContent = '▶ Старт';
+  cpBuild();
+}
+document.getElementById('cpLess').onclick = () => cpSetN(cpN - 1);
+document.getElementById('cpMore').onclick = () => cpSetN(cpN + 1);
+document.getElementById('cpStart').onclick = cpPlay;
+document.querySelector('nav [data-screen=cups]').addEventListener('click', () => {
+  if (cpState !== 'show' && cpState !== 'shuffle') requestAnimationFrame(() => { cpLayout(); cpCups.forEach(c => cpPlace(c, c.slot)); });
+});
+window.addEventListener('resize', () => { if (cpState !== 'shuffle') { cpLayout(); cpCups.forEach(c => cpPlace(c, c.slot)); } });
+cpBuild();
+
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');
 let ideas = JSON.parse(localStorage.getItem('ideas') || '[]');
@@ -1568,7 +1722,7 @@ function generatedStep(t, step) {
   return { mel, bass };
 }
 
-const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null, studio: 'calm', products: 'calm', numbers: 'calm', sounds: null };
+const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null, studio: 'calm', products: 'calm', numbers: 'calm', sounds: null, cups: 'play' };
 const MUSIC_VOLUME = 0.1;
 
 let musicOn = localStorage.getItem('musicOn') !== '0';

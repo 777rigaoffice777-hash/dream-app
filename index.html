@@ -7,11 +7,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
-  <meta name="app-version" content="49">
+  <meta name="app-version" content="50">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=49">
+  <link rel="stylesheet" href="style.css?v=50">
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
   </script>
@@ -304,6 +304,21 @@
       </div>
     </section>
 
+    <!-- Стаканчики: где шарик? -->
+    <section id="cups" class="screen">
+      <div class="cpTop">
+        <div class="cpCount">
+          <button id="cpLess">−</button>
+          <span><b id="cpN">3</b> стаканч.</span>
+          <button id="cpMore">+</button>
+        </div>
+        <div class="cpScore" id="cpScore">Угадано 0 из 0</div>
+      </div>
+      <div class="cpMsg" id="cpMsg">Нажми «Старт» — покажу, где шарик</div>
+      <div class="cpStage" id="cpStage"></div>
+      <button id="cpStart" class="big">▶ Старт</button>
+    </section>
+
     <!-- Экран: Идеи -->
     <section id="ideas" class="screen">
       <h2>Мои идеи</h2>
@@ -380,12 +395,13 @@
     <button data-screen="products">📦<span>Продукты</span></button>
     <button data-screen="numbers">🎲<span>Числа</span></button>
     <button data-screen="sounds">🔊<span>Звуки</span></button>
+    <button data-screen="cups">🥤<span>Стаканы</span></button>
     <button data-screen="ideas">💡<span>Идеи</span></button>
     <button data-screen="draw">🎨<span>Рисовать</span></button>
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=49"></script>
+  <script src="app.js?v=50"></script>
   <script>
     // Страховка: если основной код не запустился (в нём ошибка), каждые 30 секунд проверяем,
     // не выложена ли исправленная версия, и перезагружаемся на неё. Работает отдельно от app.js.
@@ -397,6 +413,6 @@
       }).catch(function () {});
     }, 30000);
   </script>
-  <script type="module" src="studio.js?v=49"></script>
+  <script type="module" src="studio.js?v=50"></script>
 </body>
 </html>
