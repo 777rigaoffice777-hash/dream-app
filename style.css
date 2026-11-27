@@ -522,18 +522,20 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 .cpScore { font-size: .65rem; font-weight: 700; opacity: .9; text-align: right; }
 .cpMsg { text-align: center; font-weight: 800; font-size: .9rem; min-height: 1.5em; margin: 6px 0; }
 .cpStage { position: relative; width: 100%; background: rgba(255,255,255,.06); border-radius: 18px; margin-bottom: 14px; }
-.cpCup { position: absolute; left: 0; top: 0; aspect-ratio: 100 / 110; will-change: transform; }
+.cpCup { position: absolute; left: 0; top: 0; aspect-ratio: 100 / 145; will-change: transform; }
 .cpBody { position: relative; z-index: 2; transition: transform .35s ease; }
 .cpBody svg { width: 100%; display: block; filter: drop-shadow(0 6px 6px rgba(0,0,0,.35)); }
-.cpCup.up .cpBody { transform: translateY(-58%); }
+.cpCup.up .cpBody { transform: translateY(-62%); }
 .cpBall {
-  position: absolute; z-index: 1; left: 50%; bottom: 4%; width: 38%; aspect-ratio: 1; transform: translateX(-50%);
+  position: absolute; z-index: 1; left: 50%; bottom: 5%; width: 34%; aspect-ratio: 1; transform: translateX(-50%);
   border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6a8, #ffcc00 45%, #e08e00);
   box-shadow: 0 4px 6px rgba(0,0,0,.35); visibility: hidden;
 }
-.cpCup.hasBall .cpBall { visibility: visible; }
+/* Шарик виден ТОЛЬКО когда стаканчик поднят — подсмотреть нельзя */
+.cpCup.hasBall.up .cpBall { visibility: visible; }
 .cpStage.pick .cpCup { cursor: pointer; }
-.cpStage.pick .cpBody { animation: cpHint 1.2s ease-in-out infinite; }
-@keyframes cpHint { 50% { transform: translateY(-6%); } }
+.cpStage.pick .cpBody svg { animation: cpHint 1.2s ease-in-out infinite; }
+/* Подсказка «нажми» — светится контур, сам стаканчик стоит на месте */
+@keyframes cpHint { 50% { filter: drop-shadow(0 0 10px #ffe066) drop-shadow(0 6px 6px rgba(0,0,0,.35)); } }
 #cpStart { width: 100%; }
 #cpStart:disabled { opacity: .55; }

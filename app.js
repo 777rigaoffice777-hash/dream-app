@@ -1,4 +1,4 @@
-/* build 52 */
+/* build 53 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1423,13 +1423,14 @@ const SHUFFLE_MS = 7000;          // сколько длится перемеш�
 const SWAP_MS = 420;              // сколько длится одна перестановка
 const SHOW_BALL_MS = 1400;        // сколько показываем шарик перед перемешиванием
 // Стаканчик и шарик нарисованы прямо в коде (SVG)
-const CUP_SVG = `<svg viewBox="0 0 100 110"><defs><linearGradient id="cupG" x1="0" x2="1">
+// Глубокий стаканчик (выше, чем шире) — шарик прячется в самой глубине
+const CUP_SVG = `<svg viewBox="0 0 100 145"><defs><linearGradient id="cupG" x1="0" x2="1">
   <stop offset="0" stop-color="#b3141c"/><stop offset=".45" stop-color="#ff4a4f"/><stop offset="1" stop-color="#a01018"/></linearGradient></defs>
-  <path d="M22 8 H78 L94 100 Q50 112 6 100 Z" fill="url(#cupG)"/>
-  <ellipse cx="50" cy="8" rx="28" ry="6" fill="#d62a31"/>
-  <path d="M15 52 Q50 60 85 52 L87 64 Q50 72 13 64 Z" fill="#fff" opacity=".9"/>
-  <path d="M10 82 Q50 90 90 82 L91 90 Q50 98 9 90 Z" fill="#fff" opacity=".6"/>
-  <ellipse cx="50" cy="100" rx="44" ry="7" fill="#7d0a10"/></svg>`;
+  <path d="M24 8 H76 L95 132 Q50 145 5 132 Z" fill="url(#cupG)"/>
+  <ellipse cx="50" cy="8" rx="26" ry="6" fill="#d62a31"/>
+  <path d="M17 58 Q50 66 83 58 L85 71 Q50 79 15 71 Z" fill="#fff" opacity=".9"/>
+  <path d="M11 100 Q50 108 89 100 L90 109 Q50 117 10 109 Z" fill="#fff" opacity=".6"/>
+  <ellipse cx="50" cy="132" rx="45" ry="8" fill="#7d0a10"/></svg>`;
 
 let cpN = Math.min(CUPS_MAX, Math.max(CUPS_MIN, Number(localStorage.getItem('cupsN')) || 3));
 let cpScore = JSON.parse(localStorage.getItem('cupsScore') || '{"win":0,"total":0}');
@@ -1441,8 +1442,8 @@ function cpLayout() {
   const W = cpStage.clientWidth || 340;
   const cols = cpN <= 5 ? cpN : 5, rows = Math.ceil(cpN / cols);
   const size = Math.min(96, (W - 10) / cols - 10);
-  const rowH = size * 1.45;
-  const top = size * 0.7; // место сверху, чтобы приподнятый стаканчик не наезжал на надпись
+  const rowH = size * 1.8;
+  const top = size * 0.95; // место сверху, чтобы приподнятый стаканчик не наезжал на надпись
   cpStage.style.height = rows * rowH + top + 10 + 'px';
   cpSlots = [...Array(cpN)].map((_, i) => {
     const r = Math.floor(i / cols), inRow = Math.min(cols, cpN - r * cols), c = i % cols;
