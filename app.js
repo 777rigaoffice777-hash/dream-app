@@ -1,4 +1,4 @@
-/* build 53 */
+/* build 54 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1869,7 +1869,13 @@ setMusicForScreen('dots');
 const APP_VERSION = document.querySelector('meta[name="app-version"]').content;
 document.getElementById('appVersion').textContent = 'версия ' + APP_VERSION;
 
+// Без интернета приложение работает из памяти телефона — сообщаем об этом
+window.addEventListener('offline', () => showToast('📴 Нет интернета — работаю без него'));
+window.addEventListener('online', () => { showToast('📶 Интернет снова есть'); checkForUpdate(); });
+if (!navigator.onLine) setTimeout(() => showToast('📴 Нет интернета — работаю без него'), 800);
+
 async function checkForUpdate() {
+  if (!navigator.onLine) return; // без интернета обновлений не ищем
   try {
     const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
     const { v } = await r.json();

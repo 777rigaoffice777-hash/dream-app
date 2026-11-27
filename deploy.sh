@@ -5,6 +5,8 @@ cd "$(dirname "$0")" || exit 1
 # Сначала проверяем код: с ошибкой ничего не выкладываем
 node --check app.js || { echo "ОШИБКА в app.js — выкладка отменена"; exit 1; }
 node -e "new Function(require('fs').readFileSync('studio.js','utf8').replace(/^import.*$/mg,''))" || { echo "ОШИБКА в studio.js — выкладка отменена"; exit 1; }
+# Все файлы из списка FILES в sw.js должны существовать — иначе приложение не сможет работать без интернета
+node -e "const s=require('fs').readFileSync('sw.js','utf8'); const a=s.indexOf('const FILES'); const list=s.slice(a, s.indexOf('];', a)).match(/'([^']+)'/g).map(x=>x.slice(1,-1)).filter(f=>f!=='./'); const miss=list.filter(f=>!require('fs').existsSync(f)); if(miss.length){console.error('Нет файлов из sw.js FILES: '+miss.join(', ')); process.exit(1);}" || { echo "ОШИБКА в списке файлов sw.js — выкладка отменена"; exit 1; }
 bash bump.sh
 git add -A && git commit -q -m "${1:-Обновление}" && git push -q || exit 1
 n=$(grep -o '[0-9]*' version.json)
