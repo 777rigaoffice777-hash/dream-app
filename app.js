@@ -1,4 +1,4 @@
-/* build 51 */
+/* build 52 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1442,11 +1442,12 @@ function cpLayout() {
   const cols = cpN <= 5 ? cpN : 5, rows = Math.ceil(cpN / cols);
   const size = Math.min(96, (W - 10) / cols - 10);
   const rowH = size * 1.45;
-  cpStage.style.height = rows * rowH + 20 + 'px';
+  const top = size * 0.7; // место сверху, чтобы приподнятый стаканчик не наезжал на надпись
+  cpStage.style.height = rows * rowH + top + 10 + 'px';
   cpSlots = [...Array(cpN)].map((_, i) => {
     const r = Math.floor(i / cols), inRow = Math.min(cols, cpN - r * cols), c = i % cols;
     const rowW = inRow * (size + 10) - 10;
-    return { x: (W - rowW) / 2 + c * (size + 10), y: 20 + r * rowH, size };
+    return { x: (W - rowW) / 2 + c * (size + 10), y: top + r * rowH, size };
   });
 }
 const cpPlace = (cup, slot) => {
