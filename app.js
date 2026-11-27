@@ -1,4 +1,4 @@
-/* build 46 */
+/* build 47 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -160,6 +160,24 @@ document.getElementById('thSave').onclick = () => {
   theme.name = name;
   saveTheme();
   showToast('🎨 Тема «' + name + '» сохранена');
+};
+// ♻️ Сбросить всё — только то, что касается темы. Остальное приложение не трогаем
+document.getElementById('thResetAll').onclick = () => {
+  if (!confirm('Сбросить всё про тему?
+
+• тема станет стандартной «Космос»
+• мои цвета и эмодзи вернутся к началу
+• сохранённые мои темы удалятся')) return;
+  ['theme', 'myThemes', 'myColors', 'myEmojis'].forEach(k => localStorage.removeItem(k));
+  theme = { ...THEME_PRESETS[0] };
+  myThemes = [];
+  myColors = [...START_COLORS];
+  myEmojis = [...START_EMOJIS];
+  thSlot = 'bg'; thMode = 'title';
+  if (thTrash) document.getElementById('thTrash').click();
+  applyTheme(theme);
+  thDraw();
+  showToast('♻️ Тема сброшена');
 };
 thDraw();
 
