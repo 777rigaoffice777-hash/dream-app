@@ -512,3 +512,4 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 .thActions { margin-top: 18px; }
 .thActions button { font-size: .7rem; }
 .labTitle { margin-top: 30px; }
+#thResetAll { background: #e5484d; color: #fff; }

@@ -2,6 +2,9 @@
 # Выложить изменения и дождаться, пока на сайте обновятся ВСЕ файлы.
 #   bash deploy.sh "что я поменял"
 cd "$(dirname "$0")" || exit 1
+# Сначала проверяем код: с ошибкой ничего не выкладываем
+node --check app.js || { echo "ОШИБКА в app.js — выкладка отменена"; exit 1; }
+node -e "new Function(require('fs').readFileSync('studio.js','utf8').replace(/^import.*$/mg,''))" || { echo "ОШИБКА в studio.js — выкладка отменена"; exit 1; }
 bash bump.sh
 git add -A && git commit -q -m "${1:-Обновление}" && git push -q || exit 1
 n=$(grep -o '[0-9]*' version.json)
