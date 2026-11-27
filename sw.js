@@ -2,7 +2,7 @@
 // 1) При установке и каждом обновлении сразу скачивает ВСЕ файлы приложения в память телефона.
 // 2) Когда интернет есть — берёт свежие файлы с сайта (и обновляет копию в памяти).
 // 3) Когда интернета нет или он очень медленный — берёт файлы из памяти.
-const CACHE = 'masterskaya-v54';
+const CACHE = 'masterskaya-v55';
 const NETWORK_TIMEOUT_MS = 4000; // дольше не ждём сеть — берём из памяти
 
 // ВСЕ файлы приложения. Добавил новый файл (картинку, звук, скрипт) — допиши его сюда!
@@ -38,12 +38,12 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Ищем файл в памяти: сначала точно такой же адрес, потом без «?v=…» в конце
+// В памяти каждый файл хранится ОДИН раз — адрес без «?v=…» и «?t=…» в конце.
+// Иначе каждая проверка обновлений (version.json?t=…) копилась бы отдельно и занимала место.
+const cacheKey = req => { const u = new URL(req.url); return u.origin + u.pathname; };
 async function fromCache(req) {
-  const exact = await caches.match(req);
-  if (exact) return exact;
-  const loose = await caches.match(req, { ignoreSearch: true });
-  if (loose) return loose;
+  const hit = await caches.match(cacheKey(req));
+  if (hit) return hit;
   if (req.mode === 'navigate') return caches.match('index.html'); // открыли приложение — отдаём главную страницу
   return undefined;
 }
@@ -60,7 +60,7 @@ self.addEventListener('fetch', e => {
       ]);
       if (res.ok) {
         const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy));
+        caches.open(CACHE).then(c => c.put(cacheKey(req), copy));
       }
       return res;
     } catch (err) {
