@@ -1,4 +1,4 @@
-/* build 50 */
+/* build 51 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1487,7 +1487,8 @@ function cpSwap(a, b, ms) {
   const anims = [move(a, sa, sb, -1), move(b, sb, sa, 1)];
   [a.slot, b.slot] = [b.slot, a.slot];
   cpPlace(a, a.slot); cpPlace(b, b.slot);
-  return Promise.all(anims.map(x => x.finished.catch(() => {})));
+  // Ждём по часам, а не конца анимации: так 7 секунд будут ровно 7, даже если телефон тормозит анимацию
+  return wait(ms);
 }
 
 async function cpPlay() {
