@@ -1595,7 +1595,7 @@ async function qzLoad() {
   qzEl('qzSources').innerHTML = `<p>${qzData.sources.images}</p><p>${qzData.sources.modern}</p><p>${qzData.sources.historical}</p>`;
   return qzData;
 }
-const qzModeKey = () => qzKind + ':' + qzType;
+const qzModeKey = () => (qzKind === 'mine' ? 'mine' : qzKind + ':' + qzType);
 function qzShowBest() {
   const b = qzBest[qzModeKey()];
   qzEl('qzBest').textContent = b != null ? `🏆 Рекорд в этом режиме: ${b} из ${QZ_ROUND}` : '';
@@ -1605,9 +1605,139 @@ function qzChoice(groupId, onPick) {
     document.querySelectorAll(`#${groupId} button`).forEach(x => x.classList.toggle('sel', x === b));
     onPick(b.dataset.v);
     qzShowBest();
+
+// ===== Свои вопросы в викторине =====
+// Хранятся в телефоне (quizMine): { id, ask, image (сжатое фото) или emoji, right, wrong: [...] }
+const QM_PHOTO_SIZE = 480;        // фото уменьшаем до такого размера, чтобы не занимать много места
+let qzMine = JSON.parse(localStorage.getItem('quizMine') || '[]');
+let qmEditId = null, qmImage = null;
+const escapeHtml = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const qmSaveAll = () => { localStorage.setItem('quizMine', JSON.stringify(qzMine)); };
+
+function qzStartMine() {
+  if (!qzMine.length) { qzEl('qzEditor').hidden = false; qmDraw(); return showToast('Сначала добавь свой вопрос ✏️'); }
+  qzQueue = shuffle(qzMine).slice(0, QZ_ROUND).map(q => ({ item: { key: 'right', name: q.right }, type: 'mine', q }));
+  qzIdx = 0; qzRight = 0;
+  qzScreen('qzGame');
+  qzAskNext();
+}
+function qzAskMine({ item, q }) {
+  qzEl('qzProgress').textContent = `Вопрос ${qzIdx + 1} из ${qzQueue.length}`;
+  qzEl('qzScore').textContent = `✅ ${qzRight}`;
+  qzEl('qzAsk').textContent = q.ask;
+  const pic = qzEl('qzPic');
+  pic.className = 'qzPic mine';
+  pic.hidden = !q.image && !q.emoji;
+  pic.innerHTML = q.image ? '<img alt="">' : `<span class="qmBigEmoji">${escapeHtml(q.emoji || '')}</span>`;
+  if (q.image) pic.querySelector('img').src = q.image;
+  // Неправильных мало? Добавим правильные ответы других своих вопросов
+  let wrong = q.wrong.filter(Boolean);
+  if (wrong.length < QZ_OPTIONS - 1) {
+    const extra = shuffle(qzMine.map(x => x.right).filter(r => r !== q.right && !wrong.includes(r)));
+    wrong = [...wrong, ...extra].slice(0, QZ_OPTIONS - 1);
+  }
+  const box = qzEl('qzAnswers');
+  box.innerHTML = '';
+  shuffle([{ key: 'right', name: q.right }, ...wrong.map((w, i) => ({ key: 'w' + i, name: w }))]).forEach(opt => {
+    const b = document.createElement('button');
+    b.textContent = opt.name;
+    b.dataset.key = opt.key;
+    b.onclick = () => qzAnswer(b, opt, item, 'mine');
+    box.appendChild(b);
+  });
+  qzEl('qzFact').textContent = '';
+  qzEl('qzNext').hidden = true;
+}
+
+// ---------- Редактор своих вопросов ----------
+function qmDraw() {
+  qzEl('qmCount').textContent = qzMine.length ? `(${qzMine.length})` : '';
+  const list = qzEl('qmList');
+  list.innerHTML = qzMine.length ? '' : '<p class="qmEmpty">Пока нет своих вопросов — придумай первый!</p>';
+  qzMine.forEach(q => {
+    const row = document.createElement('div');
+    row.className = 'qmItem' + (q.id === qmEditId ? ' sel' : '');
+    row.innerHTML = '<span class="qmThumb"></span><span class="qmText"><b></b><small></small></span><button class="qmDel" title="Удалить">🗑</button>';
+    const th = row.querySelector('.qmThumb');
+    if (q.image) { th.innerHTML = '<img alt="">'; th.querySelector('img').src = q.image; } else th.textContent = q.emoji || '❓';
+    row.querySelector('b').textContent = q.ask;
+    row.querySelector('small').textContent = '✅ ' + q.right;
+    row.onclick = e => { if (!e.target.closest('.qmDel')) qmEdit(q); };
+    row.querySelector('.qmDel').onclick = () => {
+      if (!confirm('Удалить вопрос «' + q.ask + '»?')) return;
+      qzMine = qzMine.filter(x => x !== q); qmSaveAll();
+      if (qmEditId === q.id) qmReset();
+      qmDraw();
+    };
+    list.appendChild(row);
   });
 }
-qzChoice('qzKind', v => { qzKind = v; });
+function qmShowPic() {
+  const emoji = qzEl('qmEmoji').value.trim();
+  const box = qzEl('qmPreview');
+  box.innerHTML = '';
+  if (qmImage) { box.innerHTML = '<img alt="">'; box.querySelector('img').src = qmImage; }
+  else if (emoji) { box.innerHTML = '<span class="qmBigEmoji"></span>'; box.querySelector('span').textContent = emoji; }
+  qzEl('qmPicClear').hidden = !qmImage && !emoji;
+}
+function qmReset() {
+  qmEditId = null; qmImage = null;
+  ['qmAsk', 'qmEmoji', 'qmRight'].forEach(id => { qzEl(id).value = ''; });
+  document.querySelectorAll('.qmWrong').forEach(i => { i.value = ''; });
+  qzEl('qmFile').value = '';
+  qzEl('qmFormTitle').textContent = '➕ Новый вопрос';
+  qzEl('qmCancel').hidden = true;
+  qmShowPic();
+}
+function qmEdit(q) {
+  qmEditId = q.id; qmImage = q.image || null;
+  qzEl('qmAsk').value = q.ask; qzEl('qmEmoji').value = q.emoji || ''; qzEl('qmRight').value = q.right;
+  document.querySelectorAll('.qmWrong').forEach((i, n) => { i.value = q.wrong[n] || ''; });
+  qzEl('qmFormTitle').textContent = '✏️ Меняем вопрос';
+  qzEl('qmCancel').hidden = false;
+  qmShowPic(); qmDraw();
+  qzEl('qmAsk').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+// Фото с телефона: уменьшаем и сжимаем, чтобы помещалось в память приложения
+qzEl('qmFile').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, QM_PHOTO_SIZE / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    qmImage = c.toDataURL('image/jpeg', 0.8);
+    URL.revokeObjectURL(img.src);
+    qzEl('qmEmoji').value = '';
+    qmShowPic();
+  };
+  img.onerror = () => showToast('Не получилось открыть картинку');
+  img.src = URL.createObjectURL(file);
+};
+qzEl('qmEmoji').oninput = () => { if (qzEl('qmEmoji').value.trim()) qmImage = null; qmShowPic(); };
+qzEl('qmPicClear').onclick = () => { qmImage = null; qzEl('qmEmoji').value = ''; qzEl('qmFile').value = ''; qmShowPic(); };
+qzEl('qmCancel').onclick = () => { qmReset(); qmDraw(); };
+qzEl('qmSave').onclick = () => {
+  const ask = qzEl('qmAsk').value.trim(), right = qzEl('qmRight').value.trim();
+  const wrong = [...document.querySelectorAll('.qmWrong')].map(i => i.value.trim()).filter(Boolean);
+  if (!ask) return showToast('Напиши вопрос');
+  if (!right) return showToast('Напиши правильный ответ');
+  if (!wrong.length && qzMine.filter(q => q.id !== qmEditId).length < 1) return showToast('Напиши хотя бы один неправильный ответ');
+  if (wrong.includes(right)) return showToast('Неправильный ответ совпадает с правильным');
+  const q = { id: qmEditId || Date.now(), ask, right, wrong, emoji: qmImage ? '' : qzEl('qmEmoji').value.trim(), image: qmImage || '' };
+  const was = qzMine.findIndex(x => x.id === q.id);
+  if (was >= 0) qzMine[was] = q; else qzMine.push(q);
+  try { qmSaveAll(); }
+  catch (err) { if (was < 0) qzMine.pop(); return showToast('Память переполнена — удали старые вопросы с фото'); }
+  showToast(was >= 0 ? '✏️ Вопрос изменён' : '⭐ Вопрос добавлен');
+  qmReset(); qmDraw();
+};
+qzEl('qzMine').onclick = () => { qzEl('qzEditor').hidden = !qzEl('qzEditor').hidden; qmDraw(); };
+  });
+}
+qzChoice('qzKind', v => { qzKind = v; qzEl('qzTypeBox').hidden = v === 'mine'; });
 qzChoice('qzType', v => { qzType = v; });
 
 function qzScreen(name) {
@@ -1616,6 +1746,7 @@ function qzScreen(name) {
 
 // Набираем вопросы: разные страны, у каждой должна быть нужная картинка
 async function qzStart() {
+  if (qzKind === 'mine') return qzStartMine();
   const data = await qzLoad();
   const items = data.items.filter(i => qzKind === 'all' || i.kind === qzKind);
   const types = qzType === 'mix' ? ['flag', 'arms', 'outline', 'locator'] : [qzType];
@@ -1633,6 +1764,8 @@ async function qzStart() {
 function qzAskNext() {
   const { item, type } = qzQueue[qzIdx];
   qzAnswered = false;
+  qzEl('qzPic').hidden = false;
+  if (type === 'mine') return qzAskMine(qzQueue[qzIdx]);
   qzEl('qzProgress').textContent = `Вопрос ${qzIdx + 1} из ${qzQueue.length}`;
   qzEl('qzScore').textContent = `✅ ${qzRight}`;
   qzEl('qzAsk').textContent = QZ_ASK[type];
@@ -1694,6 +1827,12 @@ function qzAnswer(btn, opt, item, type) {
   sfx(right ? 'win' : 'wrong');
   if (navigator.vibrate) navigator.vibrate(right ? 30 : 120);
   say(right ? item.name : 'Это ' + item.name);
+  if (type === 'mine') {
+    qzEl('qzFact').innerHTML = `<b>${right ? '🎉 Правильно!' : '😅 Нет, правильно:'}</b> ${escapeHtml(item.name)}`;
+    qzEl('qzNext').hidden = false;
+    qzEl('qzNext').textContent = qzIdx + 1 < qzQueue.length ? 'Дальше →' : '🏁 Итог';
+    return;
+  }
   const src = type === 'outline' || type === 'locator'
     ? (item.kind === 'modern' ? 'карта Natural Earth' : 'исторические карты historical-basemaps' + (type === 'locator' ? ' + Natural Earth' : ''))
     : 'Wikimedia Commons — ' + (item.credits[type] || '');

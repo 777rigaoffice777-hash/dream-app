@@ -328,7 +328,9 @@
           <button data-v="modern" class="sel">🌍 Современные</button>
           <button data-v="historical">🏰 Исторические</button>
           <button data-v="all">🔀 Все</button>
+          <button data-v="mine">⭐ Мои вопросы</button>
         </div>
+        <div id="qzTypeBox">
         <div class="qzLabel">Что угадываем?</div>
         <div class="qzChoice" id="qzType">
           <button data-v="flag" class="sel">🏳️ Флаг</button>
@@ -337,8 +339,33 @@
           <button data-v="locator">📍 Расположение</button>
           <button data-v="mix">🎲 Всё</button>
         </div>
+        </div>
         <div class="qzBest" id="qzBest"></div>
         <button id="qzStart" class="big">▶ Начать</button>
+        <button id="qzMine" class="qzInfoBtn">✏️ Мои вопросы</button>
+        <!-- Свои вопросы: текст, картинка (фото или эмодзи), правильный и неправильные ответы -->
+        <div id="qzEditor" hidden>
+          <div class="qzLabel">Мои вопросы <span id="qmCount"></span></div>
+          <div id="qmList"></div>
+          <div class="qmForm">
+            <div class="qzLabel" id="qmFormTitle">➕ Новый вопрос</div>
+            <input id="qmAsk" maxlength="120" placeholder="Вопрос, например: Столица Франции?" autocomplete="off">
+            <div class="qmPicRow">
+              <label class="qmPhoto">📷 Фото<input type="file" id="qmFile" accept="image/*"></label>
+              <input id="qmEmoji" maxlength="8" placeholder="или эмодзи 🗼" autocomplete="off">
+              <button id="qmPicClear" hidden>✕ Убрать картинку</button>
+            </div>
+            <div id="qmPreview"></div>
+            <input id="qmRight" maxlength="60" placeholder="✅ Правильный ответ" autocomplete="off">
+            <input class="qmWrong" maxlength="60" placeholder="❌ Неправильный ответ 1" autocomplete="off">
+            <input class="qmWrong" maxlength="60" placeholder="❌ Неправильный ответ 2 (можно пусто)" autocomplete="off">
+            <input class="qmWrong" maxlength="60" placeholder="❌ Неправильный ответ 3 (можно пусто)" autocomplete="off">
+            <div class="row qmBtns">
+              <button id="qmSave">💾 Сохранить вопрос</button>
+              <button id="qmCancel" hidden>Отмена</button>
+            </div>
+          </div>
+        </div>
         <button id="qzInfo" class="qzInfoBtn">ℹ️ Откуда картинки</button>
         <div id="qzSources" hidden></div>
       </div>

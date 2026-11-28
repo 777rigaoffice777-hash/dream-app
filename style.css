@@ -582,3 +582,32 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 .qzPic.locator .hl { fill: #e5484d; stroke: #a01018; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .qzPic.locator .mark { fill: none; stroke: #e5484d; stroke-width: 3px; vector-effect: non-scaling-stroke; }
 .qzChoice#qzType button { padding: 8px 10px; }
+
+/* ===== Свои вопросы в викторине ===== */
+#qzEditor { background: var(--card); border-radius: 18px; padding: 10px 12px 14px; margin-top: 10px; }
+#qzEditor[hidden], #qzTypeBox[hidden] { display: none; }
+.qmEmpty { font-size: .6rem; opacity: .8; text-align: center; }
+.qmItem { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 12px; background: rgba(255,255,255,.08); margin-bottom: 6px; cursor: pointer; }
+.qmItem.sel { box-shadow: inset 0 0 0 2px var(--accent); }
+.qmThumb { flex: 0 0 2.4em; height: 2.4em; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 1rem; overflow: hidden; }
+.qmThumb img { width: 100%; height: 100%; object-fit: cover; }
+.qmText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.qmText b { font-size: .6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qmText small { font-size: .5rem; opacity: .75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qmDel { flex: 0 0 auto; padding: 4px 8px; font-size: .7rem; background: transparent; }
+.qmForm { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.qmForm input:not([type=file]) { font: inherit; font-size: .65rem; padding: 9px 10px; border-radius: 10px; border: 0; width: 100%; }
+.qmPicRow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.qmPicRow #qmEmoji { flex: 1; min-width: 6em; width: auto; }
+.qmPhoto { position: relative; overflow: hidden; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: .62rem; padding: 9px 12px; border-radius: 10px; cursor: pointer; }
+.qmPhoto input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+#qmPicClear { font-size: .55rem; padding: 6px 10px; background: rgba(255,255,255,.15); color: var(--text); }
+#qmPreview:empty { display: none; }
+#qmPreview { background: #fff; border-radius: 12px; height: 110px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+#qmPreview img { max-height: 100%; max-width: 100%; }
+.qmBigEmoji { font-size: 4rem; line-height: 1; }
+#qmPreview .qmBigEmoji { font-size: 3rem; }
+.qmBtns { justify-content: center; }
+.qmBtns button { font-size: .65rem; }
+#qmCancel { background: rgba(255,255,255,.15); color: var(--text); }
+.qzPic[hidden] { display: none; }
