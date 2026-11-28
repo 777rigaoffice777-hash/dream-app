@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { MODERN, HISTORICAL } from './quiz-list.mjs';
+import { MODERN, HISTORICAL, AUTO_MODERN_EXCLUDE } from './quiz-list.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '..');
 const CACHE = path.join(ROOT, 'tools', 'cache');
@@ -39,22 +39,27 @@ async function politeFetch(url) {
 
 // ---------- Викиданные: флаг, герб, русское название, годы ----------
 // Ответы запоминаются в tools/cache/wikidata.json — чтобы не спрашивать одно и то же снова
-async function wikidata(titles) {
+// Страну можно найти по статье английской Википедии (wiki) или сразу по номеру в Викиданных (qid)
+async function wikidata(specs) {
   const file = path.join(CACHE, 'wikidata.json');
   const out = !FORCE && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
-  const need = titles.filter(t => !out[t]);
-  for (let i = 0; i < need.length; i += 20) {
-    const batch = need.slice(i, i + 20);
-    const url = 'https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&sites=enwiki&props=claims|labels|sitelinks'
-      + '&languages=ru&sitefilter=enwiki&titles=' + encodeURIComponent(batch.join('|'));
-    const json = await (await politeFetch(url)).json();
-    for (const e of Object.values(json.entities || {})) {
-      if (!e.sitelinks) continue;
-      out[e.sitelinks.enwiki.title] = { id: e.id, labels: e.labels,
-        claims: Object.fromEntries(['P41', 'P94', 'P571', 'P576'].filter(p => e.claims[p]).map(p => [p, e.claims[p]])) };
+  const keep = e => ({ id: e.id, labels: e.labels,
+    claims: Object.fromEntries(['P41', 'P94', 'P571', 'P576'].filter(p => e.claims && e.claims[p]).map(p => [p, e.claims[p]])) });
+  for (const by of ['titles', 'ids']) {
+    const need = specs.map(c => by === 'ids' ? c.qid : !c.qid && c.wiki).filter(t => t && !out[t]);
+    for (let i = 0; i < need.length; i += 20) {
+      const batch = need.slice(i, i + 20);
+      const url = 'https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=claims|labels|sitelinks&languages=ru'
+        + (by === 'titles' ? '&sites=enwiki&sitefilter=enwiki&titles=' : '&ids=') + encodeURIComponent(batch.join('|'));
+      const json = await (await politeFetch(url)).json();
+      for (const e of Object.values(json.entities || {})) {
+        if (e.missing !== undefined) continue;
+        if (by === 'ids') out[e.id] = keep(e);
+        else if (e.sitelinks && e.sitelinks.enwiki) out[e.sitelinks.enwiki.title] = keep(e);
+      }
+      fs.writeFileSync(file, JSON.stringify(out));
+      await sleep(1000);
     }
-    fs.writeFileSync(file, JSON.stringify(out));
-    await sleep(1000);
   }
   return out;
 }
@@ -231,13 +236,22 @@ function worldPaths() {
 }
 
 // ---------- Сборка ----------
-const list = [...MODERN.map(x => ({ ...x, kind: 'modern' })), ...HISTORICAL.map(x => ({ ...x, kind: 'historical' }))];
+// Все страны мира: те, что в списке вручную, + остальные независимые страны из карты Natural Earth
+const manualNe = new Set(MODERN.map(m => m.ne));
+const AUTO = loadGeo('ne_50m.geojson').features.map(f => f.properties)
+  .filter(p => (p.TYPE === 'Sovereign country' || (p.TYPE === 'Country' && p.ADMIN === p.SOVEREIGNT))
+    && !manualNe.has(p.ADM0_A3) && !AUTO_MODERN_EXCLUDE.includes(p.ADMIN) && p.WIKIDATAID)
+  .map(p => ({ key: (p.ISO_A2_EH && p.ISO_A2_EH !== '-99' ? p.ISO_A2_EH : p.ADM0_A3).toLowerCase(),
+               qid: p.WIKIDATAID, ne: p.ADM0_A3, name: p.NAME_RU || undefined }));
+const list = [...MODERN, ...AUTO].map(x => ({ ...x, kind: 'modern' })).concat(HISTORICAL.map(x => ({ ...x, kind: 'historical' })));
+const dupKeys = list.map(x => x.key).filter((k, i, a) => a.indexOf(k) !== i);
+if (dupKeys.length) throw new Error('Повторяются ключи: ' + dupKeys.join(', '));
 console.log(`Стран в списке: ${list.length}. Спрашиваю Викиданные…`);
-const wd = await wikidata(list.map(x => x.wiki));
+const wd = await wikidata(list);
 const items = [], problems = [];
 for (const c of list) {
-  const e = wd[c.wiki];
-  if (!e) { problems.push(`${c.key}: нет статьи «${c.wiki}» в Викиданных`); continue; }
+  const e = wd[c.qid || c.wiki];
+  if (!e) { problems.push(`${c.key}: нет «${c.qid || c.wiki}» в Викиданных`); continue; }
   const cl = e.claims || {};
   const item = { key: c.key, kind: c.kind, name: c.name || (e.labels.ru && e.labels.ru.value) || c.wiki, qid: e.id, credits: {} };
   if (c.kind === 'historical') {
