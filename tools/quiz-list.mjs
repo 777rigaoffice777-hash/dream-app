@@ -72,6 +72,7 @@ export const MODERN = [
   { key: 'pe', wiki: 'Peru', ne: 'PER', name: 'Перу' },
   { key: 'au', wiki: 'Australia', ne: 'AUS', name: 'Австралия' },
   { key: 'nz', wiki: 'New Zealand', ne: 'NZL', name: 'Новая Зеландия' },
+  { key: 'ht', wiki: 'Haiti', ne: 'HTI', name: 'Гаити' },
 ];
 
 export const HISTORICAL = [
@@ -131,7 +132,7 @@ export const HISTORICAL = [
   { key: 'h-abbasid', wiki: 'Abbasid Caliphate', hb: [800, 'Abbasid Caliphate'], name: 'Аббасидский халифат' },
   { key: 'h-carolingian', wiki: 'Carolingian Empire', hb: [800, 'Carolingian Empire'], name: 'Империя Каролингов' },
   { key: 'h-khazars', wiki: 'Khazars', hb: [800, 'Khazars'], name: 'Хазарский каганат' },
-  { key: 'h-cordoba', wiki: 'Emirate of Córdoba', hb: [800, 'Emirate of Córdoba'], name: 'Кордовский эмират' },
+  { key: 'h-cordoba', wiki: 'Umayyad state of Córdoba', hb: [800, 'Emirate of Córdoba'], name: 'Кордовский эмират' },
   { key: 'h-song', wiki: 'Song dynasty', hb: [1200, 'Song Empire'], name: 'Империя Сун' },
   { key: 'h-angevin', wiki: 'Angevin Empire', hb: [1200, 'Angevin Empire'], name: 'Анжуйская империя' },
   { key: 'h-fatimid', wiki: 'Fatimid Caliphate', hb: [1200, 'Fatimid Caliphate'], name: 'Фатимидский халифат' },
@@ -149,7 +150,7 @@ export const HISTORICAL = [
   { key: 'h-scotland', wiki: 'Kingdom of Scotland', hb: [1492, 'Scotland'], name: 'Королевство Шотландия' },
   { key: 'h-crimea', wiki: 'Crimean Khanate', hb: [1492, 'Crimean Khanate'], name: 'Крымское ханство' },
   { key: 'h-sibir', wiki: 'Khanate of Sibir', hb: [1492, 'Khanate of Sibir'], name: 'Сибирское ханство' },
-  { key: 'h-ryazan', wiki: 'Grand Duchy of Ryazan', hb: [1492, 'Ryazan'], name: 'Рязанское княжество' },
+  { key: 'h-ryazan', wiki: 'Principality of Ryazan', hb: [1492, 'Ryazan'], name: 'Рязанское княжество' },
   { key: 'h-pskov', wiki: 'Pskov Republic', hb: [1492, 'Pskov'], name: 'Псковская республика' },
   { key: 'h-ming', wiki: 'Ming dynasty', hb: [1500, 'Ming Chinese Empire'], name: 'Империя Мин' },
   { key: 'h-songhai', wiki: 'Songhai Empire', hb: [1500, 'Songhai'], name: 'Империя Сонгай' },
@@ -157,7 +158,7 @@ export const HISTORICAL = [
   { key: 'h-burgundy', wiki: 'Duchy of Burgundy', name: 'Герцогство Бургундия' },
   { key: 'h-brittany', wiki: 'Duchy of Brittany', name: 'Герцогство Бретань' },
   { key: 'h-bohemia', wiki: 'Kingdom of Bohemia', name: 'Королевство Богемия' },
-  { key: 'h-livonia', wiki: 'Livonian Confederation', name: 'Ливонская конфедерация' },
+  { key: 'h-livonia', wiki: 'Terra Mariana', name: 'Ливонская конфедерация' },
   { key: 'h-lorraine', wiki: 'Duchy of Lorraine', name: 'Герцогство Лотарингия' },
   { key: 'h-duchyprussia', wiki: 'Duchy of Prussia', name: 'Герцогство Пруссия' },
   // ---------- Новое время ----------
