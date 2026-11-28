@@ -1,4 +1,4 @@
-/* build 57 */
+/* build 58 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1665,13 +1665,16 @@ function qzAskNext() {
 // Координаты — градусы; scale(k,1) сжимает долготу, чтобы страны не были растянуты вширь.
 function qzLocatorSvg(item) {
   const L = item.locator, w = qzData.world, [x, y, vw, vh] = L.vb;
-  const copies = id => [-360, 0, 360].map(t => `<use href="#${id}" x="${t}"/>`).join('');
+  // Копия карты за линией смены дат нужна, только если окно за неё заходит (Россия у Чукотки)
+  const shifts = [0];
+  if ((x + vw) / L.k > 180) shifts.push(360);
+  if (x / L.k < -180) shifts.push(-360);
+  const copies = (d, cls) => shifts.map(t => `<path class="${cls}" d="${d}"${t ? ` transform="translate(${t},0)"` : ''}/>`).join('');
   return `<svg viewBox="${x} ${y} ${vw} ${vh}" preserveAspectRatio="xMidYMid slice">
-    <defs><path id="qzLand" d="${w.land}"/><path id="qzBorders" d="${w.borders}"/></defs>
     <rect class="sea" x="${x}" y="${y}" width="${vw}" height="${vh}"/>
     <g transform="scale(${L.k},1)">
-      <g class="land">${copies('qzLand')}</g>
-      ${item.kind === 'modern' ? `<g class="borders">${copies('qzBorders')}</g>` : ''}
+      ${copies(w.land, 'land')}
+      ${item.kind === 'modern' ? copies(w.borders, 'borders') : ''}
       <path class="hl" d="${L.d}" fill-rule="evenodd"/>
       ${L.mark ? `<ellipse class="mark" cx="${L.mark[0]}" cy="${L.mark[1]}" rx="${L.mark[2] / L.k}" ry="${L.mark[2]}"/>` : ''}
     </g></svg>`;
