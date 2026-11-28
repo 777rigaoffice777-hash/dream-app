@@ -1,4 +1,4 @@
-/* build 59 */
+/* build 60 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1605,6 +1605,132 @@ function qzChoice(groupId, onPick) {
     document.querySelectorAll(`#${groupId} button`).forEach(x => x.classList.toggle('sel', x === b));
     onPick(b.dataset.v);
     qzShowBest();
+  });
+}
+qzChoice('qzKind', v => { qzKind = v; qzEl('qzTypeBox').hidden = v === 'mine'; });
+qzChoice('qzType', v => { qzType = v; });
+
+function qzScreen(name) {
+  ['qzSetup', 'qzGame', 'qzEnd'].forEach(id => { qzEl(id).hidden = id !== name; });
+}
+
+// Набираем вопросы: разные страны, у каждой должна быть нужная картинка
+async function qzStart() {
+  if (qzKind === 'mine') return qzStartMine();
+  const data = await qzLoad();
+  const items = data.items.filter(i => qzKind === 'all' || i.kind === qzKind);
+  const types = qzType === 'mix' ? ['flag', 'arms', 'outline', 'locator'] : [qzType];
+  const pool = shuffle(items).map(i => {
+    const can = shuffle(types.filter(t => i[t]));
+    return can.length ? { item: i, type: can[0] } : null;
+  }).filter(Boolean);
+  if (pool.length < QZ_OPTIONS) return showToast('Для этого режима мало картинок — выбери другой');
+  qzQueue = pool.slice(0, QZ_ROUND);
+  qzIdx = 0; qzRight = 0;
+  qzScreen('qzGame');
+  qzAskNext();
+}
+
+function qzAskNext() {
+  const { item, type } = qzQueue[qzIdx];
+  qzAnswered = false;
+  qzEl('qzPic').hidden = false;
+  if (type === 'mine') return qzAskMine(qzQueue[qzIdx]);
+  qzEl('qzProgress').textContent = `Вопрос ${qzIdx + 1} из ${qzQueue.length}`;
+  qzEl('qzScore').textContent = `✅ ${qzRight}`;
+  qzEl('qzAsk').textContent = QZ_ASK[type];
+  const pic = qzEl('qzPic');
+  pic.className = 'qzPic ' + type;
+  if (type === 'outline') {
+    pic.innerHTML = `<svg viewBox="0 0 ${item.outline.w} ${item.outline.h}"><path d="${item.outline.d}" fill-rule="evenodd"/></svg>`;
+  } else if (type === 'locator') {
+    pic.innerHTML = qzLocatorSvg(item);
+  } else {
+    pic.innerHTML = '<img alt="">';
+    pic.querySelector('img').src = item[type];
+  }
+  // Неправильные варианты — из стран того же вида (современные к современным, исторические к историческим)
+  const others = shuffle(qzData.items.filter(i => i.kind === item.kind && i.key !== item.key)).slice(0, QZ_OPTIONS - 1);
+  const box = qzEl('qzAnswers');
+  box.innerHTML = '';
+  shuffle([item, ...others]).forEach(opt => {
+    const b = document.createElement('button');
+    b.textContent = opt.name;
+    b.dataset.key = opt.key;
+    b.onclick = () => qzAnswer(b, opt, item, type);
+    box.appendChild(b);
+  });
+  qzEl('qzFact').textContent = '';
+  qzEl('qzNext').hidden = true;
+}
+
+// Карта вокруг страны: море, суша, границы соседей (у современных), страна закрашена красным.
+// Координаты — градусы; scale(k,1) сжимает долготу, чтобы страны не были растянуты вширь.
+function qzLocatorSvg(item) {
+  const L = item.locator, w = qzData.world, [x, y, vw, vh] = L.vb;
+  // Копия карты за линией смены дат нужна, только если окно за неё заходит (Россия у Чукотки)
+  const shifts = [0];
+  if ((x + vw) / L.k > 180) shifts.push(360);
+  if (x / L.k < -180) shifts.push(-360);
+  const copies = (d, cls) => shifts.map(t => `<path class="${cls}" d="${d}"${t ? ` transform="translate(${t},0)"` : ''}/>`).join('');
+  return `<svg viewBox="${x} ${y} ${vw} ${vh}" preserveAspectRatio="xMidYMid slice">
+    <rect class="sea" x="${x}" y="${y}" width="${vw}" height="${vh}"/>
+    <g transform="scale(${L.k},1)">
+      ${copies(w.land, 'land')}
+      ${item.kind === 'modern' ? copies(w.borders, 'borders') : ''}
+      <path class="hl" d="${L.d}" fill-rule="evenodd"/>
+      ${L.mark ? `<ellipse class="mark" cx="${L.mark[0]}" cy="${L.mark[1]}" rx="${L.mark[2] / L.k}" ry="${L.mark[2]}"/>` : ''}
+    </g></svg>`;
+}
+
+function qzAnswer(btn, opt, item, type) {
+  if (qzAnswered) return;
+  qzAnswered = true;
+  const right = opt.key === item.key;
+  if (right) qzRight++;
+  qzEl('qzAnswers').querySelectorAll('button').forEach(b => {
+    if (b.dataset.key === item.key) b.classList.add('good');
+    else if (b === btn) b.classList.add('bad');
+    b.disabled = true;
+  });
+  qzEl('qzScore').textContent = `✅ ${qzRight}`;
+  sfx(right ? 'win' : 'wrong');
+  if (navigator.vibrate) navigator.vibrate(right ? 30 : 120);
+  say(right ? item.name : 'Это ' + item.name);
+  if (type === 'mine') {
+    qzEl('qzFact').innerHTML = `<b>${right ? '🎉 Правильно!' : '😅 Нет, правильно:'}</b> ${escapeHtml(item.name)}`;
+    qzEl('qzNext').hidden = false;
+    qzEl('qzNext').textContent = qzIdx + 1 < qzQueue.length ? 'Дальше →' : '🏁 Итог';
+    return;
+  }
+  const src = type === 'outline' || type === 'locator'
+    ? (item.kind === 'modern' ? 'карта Natural Earth' : 'исторические карты historical-basemaps' + (type === 'locator' ? ' + Natural Earth' : ''))
+    : 'Wikimedia Commons — ' + (item.credits[type] || '');
+  qzEl('qzFact').innerHTML = `<b>${right ? '🎉 Правильно!' : '😅 Нет, это:'}</b> ${item.name}${item.years ? ' (' + item.years + ')' : ''}<small>Картинка: ${src}</small>`;
+  qzEl('qzNext').hidden = false;
+  qzEl('qzNext').textContent = qzIdx + 1 < qzQueue.length ? 'Дальше →' : '🏁 Итог';
+}
+
+function qzFinish() {
+  const total = qzQueue.length, score = Math.round(qzRight / total * QZ_ROUND);
+  const stars = qzRight === total ? '⭐⭐⭐' : qzRight >= total * 0.7 ? '⭐⭐' : qzRight >= total * 0.4 ? '⭐' : '🙂';
+  const key = qzModeKey();
+  const record = qzBest[key] == null || score > qzBest[key];
+  if (record) { qzBest[key] = score; localStorage.setItem('quizBest', JSON.stringify(qzBest)); }
+  qzEl('qzStars').textContent = stars;
+  qzEl('qzResult').innerHTML = `Правильно ${qzRight} из ${total}` + (record ? '<br>🏆 Новый рекорд!' : '');
+  sfx('win');
+  say(`Правильно ${qzRight} из ${total}`);
+  qzScreen('qzEnd');
+}
+
+qzEl('qzStart').onclick = qzStart;
+qzEl('qzAgain').onclick = qzStart;
+qzEl('qzBack').onclick = () => { qzScreen('qzSetup'); qzShowBest(); };
+qzEl('qzExit').onclick = () => { qzScreen('qzSetup'); qzShowBest(); };
+qzEl('qzNext').onclick = () => { qzIdx++; qzIdx < qzQueue.length ? qzAskNext() : qzFinish(); };
+qzEl('qzInfo').onclick = async () => { await qzLoad(); qzEl('qzSources').hidden = !qzEl('qzSources').hidden; };
+qzShowBest();
 
 // ===== Свои вопросы в викторине =====
 // Хранятся в телефоне (quizMine): { id, ask, image (сжатое фото) или emoji, right, wrong: [...] }
@@ -1735,132 +1861,6 @@ qzEl('qmSave').onclick = () => {
   qmReset(); qmDraw();
 };
 qzEl('qzMine').onclick = () => { qzEl('qzEditor').hidden = !qzEl('qzEditor').hidden; qmDraw(); };
-  });
-}
-qzChoice('qzKind', v => { qzKind = v; qzEl('qzTypeBox').hidden = v === 'mine'; });
-qzChoice('qzType', v => { qzType = v; });
-
-function qzScreen(name) {
-  ['qzSetup', 'qzGame', 'qzEnd'].forEach(id => { qzEl(id).hidden = id !== name; });
-}
-
-// Набираем вопросы: разные страны, у каждой должна быть нужная картинка
-async function qzStart() {
-  if (qzKind === 'mine') return qzStartMine();
-  const data = await qzLoad();
-  const items = data.items.filter(i => qzKind === 'all' || i.kind === qzKind);
-  const types = qzType === 'mix' ? ['flag', 'arms', 'outline', 'locator'] : [qzType];
-  const pool = shuffle(items).map(i => {
-    const can = shuffle(types.filter(t => i[t]));
-    return can.length ? { item: i, type: can[0] } : null;
-  }).filter(Boolean);
-  if (pool.length < QZ_OPTIONS) return showToast('Для этого режима мало картинок — выбери другой');
-  qzQueue = pool.slice(0, QZ_ROUND);
-  qzIdx = 0; qzRight = 0;
-  qzScreen('qzGame');
-  qzAskNext();
-}
-
-function qzAskNext() {
-  const { item, type } = qzQueue[qzIdx];
-  qzAnswered = false;
-  qzEl('qzPic').hidden = false;
-  if (type === 'mine') return qzAskMine(qzQueue[qzIdx]);
-  qzEl('qzProgress').textContent = `Вопрос ${qzIdx + 1} из ${qzQueue.length}`;
-  qzEl('qzScore').textContent = `✅ ${qzRight}`;
-  qzEl('qzAsk').textContent = QZ_ASK[type];
-  const pic = qzEl('qzPic');
-  pic.className = 'qzPic ' + type;
-  if (type === 'outline') {
-    pic.innerHTML = `<svg viewBox="0 0 ${item.outline.w} ${item.outline.h}"><path d="${item.outline.d}" fill-rule="evenodd"/></svg>`;
-  } else if (type === 'locator') {
-    pic.innerHTML = qzLocatorSvg(item);
-  } else {
-    pic.innerHTML = '<img alt="">';
-    pic.querySelector('img').src = item[type];
-  }
-  // Неправильные варианты — из стран того же вида (современные к современным, исторические к историческим)
-  const others = shuffle(qzData.items.filter(i => i.kind === item.kind && i.key !== item.key)).slice(0, QZ_OPTIONS - 1);
-  const box = qzEl('qzAnswers');
-  box.innerHTML = '';
-  shuffle([item, ...others]).forEach(opt => {
-    const b = document.createElement('button');
-    b.textContent = opt.name;
-    b.dataset.key = opt.key;
-    b.onclick = () => qzAnswer(b, opt, item, type);
-    box.appendChild(b);
-  });
-  qzEl('qzFact').textContent = '';
-  qzEl('qzNext').hidden = true;
-}
-
-// Карта вокруг страны: море, суша, границы соседей (у современных), страна закрашена красным.
-// Координаты — градусы; scale(k,1) сжимает долготу, чтобы страны не были растянуты вширь.
-function qzLocatorSvg(item) {
-  const L = item.locator, w = qzData.world, [x, y, vw, vh] = L.vb;
-  // Копия карты за линией смены дат нужна, только если окно за неё заходит (Россия у Чукотки)
-  const shifts = [0];
-  if ((x + vw) / L.k > 180) shifts.push(360);
-  if (x / L.k < -180) shifts.push(-360);
-  const copies = (d, cls) => shifts.map(t => `<path class="${cls}" d="${d}"${t ? ` transform="translate(${t},0)"` : ''}/>`).join('');
-  return `<svg viewBox="${x} ${y} ${vw} ${vh}" preserveAspectRatio="xMidYMid slice">
-    <rect class="sea" x="${x}" y="${y}" width="${vw}" height="${vh}"/>
-    <g transform="scale(${L.k},1)">
-      ${copies(w.land, 'land')}
-      ${item.kind === 'modern' ? copies(w.borders, 'borders') : ''}
-      <path class="hl" d="${L.d}" fill-rule="evenodd"/>
-      ${L.mark ? `<ellipse class="mark" cx="${L.mark[0]}" cy="${L.mark[1]}" rx="${L.mark[2] / L.k}" ry="${L.mark[2]}"/>` : ''}
-    </g></svg>`;
-}
-
-function qzAnswer(btn, opt, item, type) {
-  if (qzAnswered) return;
-  qzAnswered = true;
-  const right = opt.key === item.key;
-  if (right) qzRight++;
-  qzEl('qzAnswers').querySelectorAll('button').forEach(b => {
-    if (b.dataset.key === item.key) b.classList.add('good');
-    else if (b === btn) b.classList.add('bad');
-    b.disabled = true;
-  });
-  qzEl('qzScore').textContent = `✅ ${qzRight}`;
-  sfx(right ? 'win' : 'wrong');
-  if (navigator.vibrate) navigator.vibrate(right ? 30 : 120);
-  say(right ? item.name : 'Это ' + item.name);
-  if (type === 'mine') {
-    qzEl('qzFact').innerHTML = `<b>${right ? '🎉 Правильно!' : '😅 Нет, правильно:'}</b> ${escapeHtml(item.name)}`;
-    qzEl('qzNext').hidden = false;
-    qzEl('qzNext').textContent = qzIdx + 1 < qzQueue.length ? 'Дальше →' : '🏁 Итог';
-    return;
-  }
-  const src = type === 'outline' || type === 'locator'
-    ? (item.kind === 'modern' ? 'карта Natural Earth' : 'исторические карты historical-basemaps' + (type === 'locator' ? ' + Natural Earth' : ''))
-    : 'Wikimedia Commons — ' + (item.credits[type] || '');
-  qzEl('qzFact').innerHTML = `<b>${right ? '🎉 Правильно!' : '😅 Нет, это:'}</b> ${item.name}${item.years ? ' (' + item.years + ')' : ''}<small>Картинка: ${src}</small>`;
-  qzEl('qzNext').hidden = false;
-  qzEl('qzNext').textContent = qzIdx + 1 < qzQueue.length ? 'Дальше →' : '🏁 Итог';
-}
-
-function qzFinish() {
-  const total = qzQueue.length, score = Math.round(qzRight / total * QZ_ROUND);
-  const stars = qzRight === total ? '⭐⭐⭐' : qzRight >= total * 0.7 ? '⭐⭐' : qzRight >= total * 0.4 ? '⭐' : '🙂';
-  const key = qzModeKey();
-  const record = qzBest[key] == null || score > qzBest[key];
-  if (record) { qzBest[key] = score; localStorage.setItem('quizBest', JSON.stringify(qzBest)); }
-  qzEl('qzStars').textContent = stars;
-  qzEl('qzResult').innerHTML = `Правильно ${qzRight} из ${total}` + (record ? '<br>🏆 Новый рекорд!' : '');
-  sfx('win');
-  say(`Правильно ${qzRight} из ${total}`);
-  qzScreen('qzEnd');
-}
-
-qzEl('qzStart').onclick = qzStart;
-qzEl('qzAgain').onclick = qzStart;
-qzEl('qzBack').onclick = () => { qzScreen('qzSetup'); qzShowBest(); };
-qzEl('qzExit').onclick = () => { qzScreen('qzSetup'); qzShowBest(); };
-qzEl('qzNext').onclick = () => { qzIdx++; qzIdx < qzQueue.length ? qzAskNext() : qzFinish(); };
-qzEl('qzInfo').onclick = async () => { await qzLoad(); qzEl('qzSources').hidden = !qzEl('qzSources').hidden; };
-qzShowBest();
 
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');
