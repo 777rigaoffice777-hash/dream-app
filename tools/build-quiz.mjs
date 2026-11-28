@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { MODERN, HISTORICAL, AUTO_MODERN_EXCLUDE } from './quiz-list.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '..');
@@ -97,8 +98,13 @@ async function download(file, name) {
     fs.writeFileSync(srcNote, file);
     await sleep(700);
   }
-  const out = path.join(IMG, name + '.webp');
-  await sharp(raw).resize(OUT_SIZE, OUT_SIZE, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 }).toFile(out);
+  // В имени файла — «отпечаток» содержимого: изменилась картинка — новое имя, и телефон скачает её заново.
+  // Неизменные картинки телефон при обновлении приложения НЕ качает повторно.
+  const buf = await sharp(raw).resize(OUT_SIZE, OUT_SIZE, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
+  const hash = createHash('sha1').update(buf).digest('hex').slice(0, 8);
+  const out = path.join(IMG, `${name}-${hash}.webp`);
+  for (const f of fs.readdirSync(IMG)) if (f.startsWith(name + '.') || (f.startsWith(name + '-') && /^[0-9a-f]{8}\.webp$/.test(f.slice(name.length + 1)) && f !== path.basename(out))) fs.unlinkSync(path.join(IMG, f));
+  fs.writeFileSync(out, buf);
   return out;
 }
 

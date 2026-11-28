@@ -1,4 +1,4 @@
-/* build 60 */
+/* build 61 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -2198,5 +2198,13 @@ checkForUpdate();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
 setInterval(checkForUpdate, 60000);
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+  // Попросить помощника докачать картинки викторины для работы без интернета (в фоне, через 3 секунды —
+  // чтобы сначала спокойно открылось само приложение)
+  const askQuizSync = () => navigator.serviceWorker.ready.then(r => r.active && r.active.postMessage('sync-quiz'));
+  setTimeout(askQuizSync, 3000);
+  window.addEventListener('online', askQuizSync);
+  navigator.serviceWorker.addEventListener('controllerchange', () => setTimeout(askQuizSync, 3000));
+}
 window.APP_OK = true; // для «страховки» в index.html: основной код запустился
