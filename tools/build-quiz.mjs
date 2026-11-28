@@ -143,25 +143,34 @@ function simplify(pts, tol) {
   return pts.filter((_, i) => keep[i]);
 }
 // clip = [запад, юг, восток, север] — оставить только земли внутри этой рамки (например, без Гренландии)
-function outline(features, clip) {
+// Основная территория страны: без крошечных островков и далёких владений за океаном.
+// Возвращает многоугольники в градусах (geo) и в «плоских» координатах (proj), k — сжатие по долготе.
+function mainPolys(features, clip) {
   let polys = polygonsOf(features);
   if (clip) polys = polys.filter(p => { const [x, y] = centroid(p[0]); return x >= clip[0] && y >= clip[1] && x <= clip[2] && y <= clip[3]; });
   if (!polys.length) return null;
   // Через линию смены дат (Чукотка, Аляска): переносим долготы, чтобы страна не разрывалась
-  const lons = polys.flat(2).filter((_, i) => i % 2 === 0);
+  const lons = polys.flatMap(p => p[0].map(q => q[0]));
   if (Math.max(...lons) - Math.min(...lons) > 180) {
     polys = polys.map(p => p.map(r => r.map(([x, y]) => [x < 0 ? x + 360 : x, y])));
   }
   const lats = polys.flatMap(p => p[0].map(q => q[1]));
-  const lat0 = ((Math.max(...lats) + Math.min(...lats)) / 2) * Math.PI / 180;
-  const k = Math.cos(lat0);
-  polys = polys.map(p => p.map(r => r.map(([x, y]) => [x * k, -y])));
-  // Оставляем основную территорию: без крошечных островков и далёких владений за океаном
-  const areas = polys.map(p => ringArea(p[0]));
+  const k = Math.cos(((Math.max(...lats) + Math.min(...lats)) / 2) * Math.PI / 180);
+  const proj = polys.map(p => p.map(r => r.map(([x, y]) => [x * k, -y])));
+  const areas = proj.map(p => ringArea(p[0]));
   const total = areas.reduce((s, a) => s + a, 0);
-  const main = polys[areas.indexOf(Math.max(...areas))];
+  const main = proj[areas.indexOf(Math.max(...areas))];
   const mc = centroid(main[0]), reach = 5 * Math.sqrt(total / Math.PI);
-  polys = polys.filter((p, i) => areas[i] >= total * 0.003 && Math.hypot(centroid(p[0])[0] - mc[0], centroid(p[0])[1] - mc[1]) <= reach);
+  const keep = proj.map((p, i) => areas[i] >= total * 0.003 && Math.hypot(centroid(p[0])[0] - mc[0], centroid(p[0])[1] - mc[1]) <= reach);
+  return { geo: polys.filter((_, i) => keep[i]), proj: proj.filter((_, i) => keep[i]), k };
+}
+const ringPath = (r, f) => 'M' + r.map(([x, y]) => f(x, y)).join('L') + 'Z';
+
+// Очертания: страна крупно, без карты вокруг
+function outline(features, clip) {
+  const m = mainPolys(features, clip);
+  if (!m) return null;
+  const polys = m.proj;
   const all = polys.flat(2);
   const xs = all.map(p => p[0]), ys = all.map(p => p[1]);
   const minX = Math.min(...xs), minY = Math.min(...ys), w = Math.max(...xs) - minX, h = Math.max(...ys) - minY;
@@ -170,10 +179,55 @@ function outline(features, clip) {
   const W = Math.round(w * s + 10), H = Math.round(h * s + 10);
   const d = polys.map(p => p.map(r => {
     const sr = simplify(r, tol);
-    if (sr.length < 4) return '';
-    return 'M' + sr.map(([x, y]) => `${((x - minX) * s + 5).toFixed(1)} ${((y - minY) * s + 5).toFixed(1)}`).join('L') + 'Z';
+    return sr.length < 4 ? '' : ringPath(sr, (x, y) => `${((x - minX) * s + 5).toFixed(1)} ${((y - minY) * s + 5).toFixed(1)}`);
   }).join('')).join('');
   return d ? { d, w: W, h: H } : null;
+}
+
+// Расположение: кусок карты мира вокруг страны, страна закрашена.
+// Координаты — градусы (x = долгота, y = −широта); vb — окно карты в «плоских» координатах, k — сжатие по долготе.
+function locator(features, clip) {
+  const m = mainPolys(features, clip);
+  if (!m) return null;
+  const pts = m.geo.flat(2);
+  const lons = pts.map(p => p[0]), lats = pts.map(p => p[1]);
+  const minLon = Math.min(...lons), maxLon = Math.max(...lons), minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const k = Math.max(0.35, m.k);
+  const cx = (minLon + maxLon) / 2, cy = (minLat + maxLat) / 2;
+  const wP = (maxLon - minLon) * k, hP = maxLat - minLat;
+  // Окно 4:3 — страна занимает примерно половину, чтобы были видны соседи и моря
+  const grow = Math.max(wP, hP) > 60 ? 1.3 : 2.2; // огромным странам (Россия) — окно поуже, чтобы страна была крупной
+  const W = Math.min(330, Math.max(wP * grow, hP * grow * 4 / 3, 26)), H = W * 0.75;
+  let y0 = -cy - H / 2;
+  if (y0 < -84) y0 = -84;
+  if (y0 + H > 84) y0 = 84 - H;
+  const x0 = cx * k - W / 2;
+  const tol = (W / k) * 0.0015;
+  const d = m.geo.map(p => p.map(r => {
+    const sr = simplify(r, tol);
+    return sr.length < 4 ? '' : ringPath(sr, (x, y) => `${x.toFixed(2)} ${(-y).toFixed(2)}`);
+  }).join('')).join('');
+  if (!d) return null;
+  const r2 = v => +v.toFixed(2);
+  const loc = { d, vb: [r2(x0), r2(y0), r2(W), r2(H)], k: +k.toFixed(3) };
+  // Маленькую страну обводим кружком, чтобы её было видно
+  if (Math.max(wP, hP) < W * 0.07) loc.mark = [r2(cx), r2(-cy), r2(W * 0.06)];
+  return loc;
+}
+
+// Фон для «Расположения»: суша и границы современных стран, один раз на весь мир
+function worldPaths() {
+  const land = polygonsOf(loadGeo('ne_50m_land.geojson').features)
+    .map(p => p.map(r => { const sr = simplify(r, 0.08); return sr.length < 4 ? '' : ringPath(sr, (x, y) => `${x.toFixed(1)} ${(-y).toFixed(1)}`); }).join('')).join('');
+  const lines = [];
+  for (const f of loadGeo('ne_110m_admin_0_boundary_lines_land.geojson').features) {
+    const g = f.geometry;
+    for (const l of (g.type === 'LineString' ? [g.coordinates] : g.coordinates)) {
+      const sl = simplify(l, 0.05);
+      if (sl.length > 1) lines.push('M' + sl.map(([x, y]) => `${x.toFixed(1)} ${(-y).toFixed(1)}`).join('L'));
+    }
+  }
+  return { land, borders: lines.join('') };
 }
 
 // ---------- Сборка ----------
@@ -200,8 +254,10 @@ for (const c of list) {
     } catch (err) { problems.push(`${c.key}: ${kind} — ${err.message}`); }
   }
   try {
-    if (c.ne) item.outline = outline(loadGeo('ne_50m.geojson').features.filter(f => f.properties.ADM0_A3 === c.ne));
-    if (c.hb) item.outline = outline(loadGeo(`world_${c.hb[0]}.geojson`).features.filter(f => f.properties.NAME === c.hb[1] || (!c.noColonies && f.properties.SUBJECTO === c.hb[1])), c.clip);
+    const feats = c.ne ? loadGeo('ne_50m.geojson').features.filter(f => f.properties.ADM0_A3 === c.ne)
+      : c.hb ? loadGeo(`world_${c.hb[0]}.geojson`).features.filter(f => f.properties.NAME === c.hb[1] || (!c.noColonies && f.properties.SUBJECTO === c.hb[1]))
+      : null;
+    if (feats) { item.outline = outline(feats, c.clip); item.locator = locator(feats, c.clip); }
     if ((c.ne || c.hb) && !item.outline) problems.push(`${c.key}: очертания не найдены`);
   } catch (err) { problems.push(`${c.key}: очертания — ${err.message}`); }
   items.push(item);
@@ -212,12 +268,15 @@ const data = {
   sources: {
     images: 'Флаги и гербы: Wikimedia Commons (файлы указаны у каждой страны в credits).',
     modern: 'Очертания современных стран: Natural Earth (naturalearthdata.com), общественное достояние.',
+    world: 'Карта мира для «Расположения»: Natural Earth (naturalearthdata.com), общественное достояние.',
     historical: 'Очертания исторических стран: historical-basemaps, A. Ourednik (github.com/aourednik/historical-basemaps), лицензия GPL-3.0.',
   },
+  world: worldPaths(),
   items,
 };
 fs.writeFileSync(path.join(OUT, 'data.json'), JSON.stringify(data));
 console.log(`\nГотово: ${items.length} стран, данные — quiz/data.json (${Math.round(fs.statSync(path.join(OUT, 'data.json')).size / 1024)} КБ)`);
 const stat = k => items.filter(i => i[k]).length;
-console.log(`Флагов ${stat('flag')}, гербов ${stat('arms')}, очертаний ${stat('outline')}`);
+console.log(`Флагов ${stat('flag')}, гербов ${stat('arms')}, очертаний ${stat('outline')}, расположений ${stat('locator')}`);
+console.log(`Карта мира: суша ${Math.round(data.world.land.length / 1024)} КБ, границы ${Math.round(data.world.borders.length / 1024)} КБ`);
 if (problems.length) console.log('Не хватает:\n  ' + problems.join('\n  '));

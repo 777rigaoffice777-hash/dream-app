@@ -572,3 +572,14 @@ nav button { flex: 1 0 auto; min-width: 54px; }
 .qzStars { text-align: center; font-size: 3rem; margin-top: 30px; }
 .qzResult { text-align: center; font-size: 1.1rem; font-weight: 800; margin: 10px 0 24px; }
 #qzBack { display: block; margin: 12px auto 0; background: var(--card); color: var(--text); font-size: .7rem; }
+
+/* Викторина: «Расположение» — карта вокруг страны */
+.qzPic.locator { padding: 0; overflow: hidden; }
+.qzPic.locator svg { display: block; }
+.qzPic.locator .sea { fill: #cfe6fb; }
+.qzPic.locator .land use { fill: #d6d6d6; stroke: #fff; stroke-width: .6px; vector-effect: non-scaling-stroke; }
+.qzPic.locator .borders use { fill: none; stroke: #9a9a9a; stroke-width: .8px; vector-effect: non-scaling-stroke; }
+.qzPic.locator .hl { fill: #e5484d; stroke: #a01018; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.qzPic.locator .mark { fill: none; stroke: #e5484d; stroke-width: 3px; vector-effect: non-scaling-stroke; }
+.qzChoice#qzType button { padding: 8px 10px; }
+.qzPic.locator #qzLand, .qzPic.locator #qzBorders { vector-effect: non-scaling-stroke; } /* толщина линий не зависит от масштаба карты */

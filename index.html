@@ -7,11 +7,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
-  <meta name="app-version" content="56">
+  <meta name="app-version" content="57">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=56">
+  <link rel="stylesheet" href="style.css?v=57">
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
   </script>
@@ -334,6 +334,7 @@
           <button data-v="flag" class="sel">🏳️ Флаг</button>
           <button data-v="arms">🛡 Герб</button>
           <button data-v="outline">🗺 Очертания</button>
+          <button data-v="locator">📍 Расположение</button>
           <button data-v="mix">🎲 Всё</button>
         </div>
         <div class="qzBest" id="qzBest"></div>
@@ -440,7 +441,7 @@
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=56"></script>
+  <script src="app.js?v=57"></script>
   <script>
     // Страховка: если основной код не запустился (в нём ошибка), каждые 30 секунд проверяем,
     // не выложена ли исправленная версия, и перезагружаемся на неё. Работает отдельно от app.js.
@@ -452,6 +453,6 @@
       }).catch(function () {});
     }, 30000);
   </script>
-  <script type="module" src="studio.js?v=56"></script>
+  <script type="module" src="studio.js?v=57"></script>
 </body>
 </html>

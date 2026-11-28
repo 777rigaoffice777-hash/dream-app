@@ -1,4 +1,4 @@
-/* build 56 */
+/* build 57 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1582,6 +1582,7 @@ const QZ_ASK = {
   flag: 'Чей это флаг?',
   arms: 'Чей это герб?',
   outline: 'Чьи это очертания?',
+  locator: 'Какая страна отмечена на карте?',
 };
 let qzData = null, qzKind = 'modern', qzType = 'flag', qzQueue = [], qzIdx = 0, qzRight = 0, qzAnswered = false;
 let qzBest = JSON.parse(localStorage.getItem('quizBest') || '{}');
@@ -1617,7 +1618,7 @@ function qzScreen(name) {
 async function qzStart() {
   const data = await qzLoad();
   const items = data.items.filter(i => qzKind === 'all' || i.kind === qzKind);
-  const types = qzType === 'mix' ? ['flag', 'arms', 'outline'] : [qzType];
+  const types = qzType === 'mix' ? ['flag', 'arms', 'outline', 'locator'] : [qzType];
   const pool = shuffle(items).map(i => {
     const can = shuffle(types.filter(t => i[t]));
     return can.length ? { item: i, type: can[0] } : null;
@@ -1639,6 +1640,8 @@ function qzAskNext() {
   pic.className = 'qzPic ' + type;
   if (type === 'outline') {
     pic.innerHTML = `<svg viewBox="0 0 ${item.outline.w} ${item.outline.h}"><path d="${item.outline.d}" fill-rule="evenodd"/></svg>`;
+  } else if (type === 'locator') {
+    pic.innerHTML = qzLocatorSvg(item);
   } else {
     pic.innerHTML = '<img alt="">';
     pic.querySelector('img').src = item[type];
@@ -1658,6 +1661,22 @@ function qzAskNext() {
   qzEl('qzNext').hidden = true;
 }
 
+// Карта вокруг страны: море, суша, границы соседей (у современных), страна закрашена красным.
+// Координаты — градусы; scale(k,1) сжимает долготу, чтобы страны не были растянуты вширь.
+function qzLocatorSvg(item) {
+  const L = item.locator, w = qzData.world, [x, y, vw, vh] = L.vb;
+  const copies = id => [-360, 0, 360].map(t => `<use href="#${id}" x="${t}"/>`).join('');
+  return `<svg viewBox="${x} ${y} ${vw} ${vh}" preserveAspectRatio="xMidYMid slice">
+    <defs><path id="qzLand" d="${w.land}"/><path id="qzBorders" d="${w.borders}"/></defs>
+    <rect class="sea" x="${x}" y="${y}" width="${vw}" height="${vh}"/>
+    <g transform="scale(${L.k},1)">
+      <g class="land">${copies('qzLand')}</g>
+      ${item.kind === 'modern' ? `<g class="borders">${copies('qzBorders')}</g>` : ''}
+      <path class="hl" d="${L.d}" fill-rule="evenodd"/>
+      ${L.mark ? `<ellipse class="mark" cx="${L.mark[0]}" cy="${L.mark[1]}" rx="${L.mark[2] / L.k}" ry="${L.mark[2]}"/>` : ''}
+    </g></svg>`;
+}
+
 function qzAnswer(btn, opt, item, type) {
   if (qzAnswered) return;
   qzAnswered = true;
@@ -1672,8 +1691,8 @@ function qzAnswer(btn, opt, item, type) {
   sfx(right ? 'win' : 'wrong');
   if (navigator.vibrate) navigator.vibrate(right ? 30 : 120);
   say(right ? item.name : 'Это ' + item.name);
-  const src = type === 'outline'
-    ? (item.kind === 'modern' ? 'карта Natural Earth' : 'исторические карты historical-basemaps')
+  const src = type === 'outline' || type === 'locator'
+    ? (item.kind === 'modern' ? 'карта Natural Earth' : 'исторические карты historical-basemaps' + (type === 'locator' ? ' + Natural Earth' : ''))
     : 'Wikimedia Commons — ' + (item.credits[type] || '');
   qzEl('qzFact').innerHTML = `<b>${right ? '🎉 Правильно!' : '😅 Нет, это:'}</b> ${item.name}${item.years ? ' (' + item.years + ')' : ''}<small>Картинка: ${src}</small>`;
   qzEl('qzNext').hidden = false;
