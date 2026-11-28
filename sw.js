@@ -2,7 +2,7 @@
 // 1) При установке и каждом обновлении сразу скачивает ВСЕ файлы приложения в память телефона.
 // 2) Когда интернет есть — берёт свежие файлы с сайта (и обновляет копию в памяти).
 // 3) Когда интернета нет или он очень медленный — берёт файлы из памяти.
-const CACHE = 'masterskaya-v55';
+const CACHE = 'masterskaya-v56';
 const NETWORK_TIMEOUT_MS = 4000; // дольше не ждём сеть — берём из памяти
 
 // ВСЕ файлы приложения. Добавил новый файл (картинку, звук, скрипт) — допиши его сюда!
@@ -19,13 +19,17 @@ const FILES = [
   'vendor/three.module.min.js',
   'vendor/addons/controls/OrbitControls.js',
   'vendor/addons/environments/RoomEnvironment.js',
+  'quiz/data.json',
 ];
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
       // cache: 'reload' — берём с сайта свежие файлы, а не старые копии браузера
-      .then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))
+      .then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))
+        // Картинки викторины (флаги, гербы) — список берём из quiz/data.json
+        .then(() => c.match('quiz/data.json')).then(r => r.json())
+        .then(d => c.addAll(d.items.flatMap(i => [i.flag, i.arms]).filter(Boolean).map(f => new Request(f, { cache: 'reload' })))))
       .then(() => self.skipWaiting())
   );
 });

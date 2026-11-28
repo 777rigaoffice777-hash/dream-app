@@ -1,5 +1,6 @@
+.DS_Store
 .claude/settings.local.json
 .playwright-mcp/
-node_modules/
-.DS_Store
 Thumbs.db
+node_modules/
+tools/cache/

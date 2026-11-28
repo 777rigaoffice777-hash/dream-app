@@ -1,4 +1,4 @@
-/* build 55 */
+/* build 56 */
 // ===== Тема приложения: свои цвета и эмодзи (настраивается во вкладке «Лаба») =====
 // Тема — это набор цветов + эмодзи в заголовке + узор из эмодзи на фоне.
 // Чтобы добавить готовую тему — допиши её в THEME_PRESETS.
@@ -1574,6 +1574,133 @@ document.querySelector('nav [data-screen=cups]').addEventListener('click', () =>
 window.addEventListener('resize', () => { if (cpState !== 'shuffle') { cpLayout(); cpCups.forEach(c => cpPlace(c, c.slot)); } });
 cpBuild();
 
+// ===== Викторина «Страны»: флаги, гербы, очертания (современные и исторические) =====
+// Данные — quiz/data.json, их собирает tools/build-quiz.mjs (список стран — tools/quiz-list.mjs).
+const QZ_ROUND = 10;               // вопросов в одном раунде
+const QZ_OPTIONS = 4;              // вариантов ответа
+const QZ_ASK = {
+  flag: 'Чей это флаг?',
+  arms: 'Чей это герб?',
+  outline: 'Чьи это очертания?',
+};
+let qzData = null, qzKind = 'modern', qzType = 'flag', qzQueue = [], qzIdx = 0, qzRight = 0, qzAnswered = false;
+let qzBest = JSON.parse(localStorage.getItem('quizBest') || '{}');
+const qzEl = id => document.getElementById(id);
+
+async function qzLoad() {
+  if (qzData) return qzData;
+  try { qzData = await (await fetch('quiz/data.json')).json(); }
+  catch (e) { showToast('Не получилось загрузить викторину 😕'); throw e; }
+  qzEl('qzSources').innerHTML = `<p>${qzData.sources.images}</p><p>${qzData.sources.modern}</p><p>${qzData.sources.historical}</p>`;
+  return qzData;
+}
+const qzModeKey = () => qzKind + ':' + qzType;
+function qzShowBest() {
+  const b = qzBest[qzModeKey()];
+  qzEl('qzBest').textContent = b != null ? `🏆 Рекорд в этом режиме: ${b} из ${QZ_ROUND}` : '';
+}
+function qzChoice(groupId, onPick) {
+  document.querySelectorAll(`#${groupId} button`).forEach(b => b.onclick = () => {
+    document.querySelectorAll(`#${groupId} button`).forEach(x => x.classList.toggle('sel', x === b));
+    onPick(b.dataset.v);
+    qzShowBest();
+  });
+}
+qzChoice('qzKind', v => { qzKind = v; });
+qzChoice('qzType', v => { qzType = v; });
+
+function qzScreen(name) {
+  ['qzSetup', 'qzGame', 'qzEnd'].forEach(id => { qzEl(id).hidden = id !== name; });
+}
+
+// Набираем вопросы: разные страны, у каждой должна быть нужная картинка
+async function qzStart() {
+  const data = await qzLoad();
+  const items = data.items.filter(i => qzKind === 'all' || i.kind === qzKind);
+  const types = qzType === 'mix' ? ['flag', 'arms', 'outline'] : [qzType];
+  const pool = shuffle(items).map(i => {
+    const can = shuffle(types.filter(t => i[t]));
+    return can.length ? { item: i, type: can[0] } : null;
+  }).filter(Boolean);
+  if (pool.length < QZ_OPTIONS) return showToast('Для этого режима мало картинок — выбери другой');
+  qzQueue = pool.slice(0, QZ_ROUND);
+  qzIdx = 0; qzRight = 0;
+  qzScreen('qzGame');
+  qzAskNext();
+}
+
+function qzAskNext() {
+  const { item, type } = qzQueue[qzIdx];
+  qzAnswered = false;
+  qzEl('qzProgress').textContent = `Вопрос ${qzIdx + 1} из ${qzQueue.length}`;
+  qzEl('qzScore').textContent = `✅ ${qzRight}`;
+  qzEl('qzAsk').textContent = QZ_ASK[type];
+  const pic = qzEl('qzPic');
+  pic.className = 'qzPic ' + type;
+  if (type === 'outline') {
+    pic.innerHTML = `<svg viewBox="0 0 ${item.outline.w} ${item.outline.h}"><path d="${item.outline.d}" fill-rule="evenodd"/></svg>`;
+  } else {
+    pic.innerHTML = '<img alt="">';
+    pic.querySelector('img').src = item[type];
+  }
+  // Неправильные варианты — из стран того же вида (современные к современным, исторические к историческим)
+  const others = shuffle(qzData.items.filter(i => i.kind === item.kind && i.key !== item.key)).slice(0, QZ_OPTIONS - 1);
+  const box = qzEl('qzAnswers');
+  box.innerHTML = '';
+  shuffle([item, ...others]).forEach(opt => {
+    const b = document.createElement('button');
+    b.textContent = opt.name;
+    b.dataset.key = opt.key;
+    b.onclick = () => qzAnswer(b, opt, item, type);
+    box.appendChild(b);
+  });
+  qzEl('qzFact').textContent = '';
+  qzEl('qzNext').hidden = true;
+}
+
+function qzAnswer(btn, opt, item, type) {
+  if (qzAnswered) return;
+  qzAnswered = true;
+  const right = opt.key === item.key;
+  if (right) qzRight++;
+  qzEl('qzAnswers').querySelectorAll('button').forEach(b => {
+    if (b.dataset.key === item.key) b.classList.add('good');
+    else if (b === btn) b.classList.add('bad');
+    b.disabled = true;
+  });
+  qzEl('qzScore').textContent = `✅ ${qzRight}`;
+  sfx(right ? 'win' : 'wrong');
+  if (navigator.vibrate) navigator.vibrate(right ? 30 : 120);
+  say(right ? item.name : 'Это ' + item.name);
+  const src = type === 'outline'
+    ? (item.kind === 'modern' ? 'карта Natural Earth' : 'исторические карты historical-basemaps')
+    : 'Wikimedia Commons — ' + (item.credits[type] || '');
+  qzEl('qzFact').innerHTML = `<b>${right ? '🎉 Правильно!' : '😅 Нет, это:'}</b> ${item.name}${item.years ? ' (' + item.years + ')' : ''}<small>Картинка: ${src}</small>`;
+  qzEl('qzNext').hidden = false;
+  qzEl('qzNext').textContent = qzIdx + 1 < qzQueue.length ? 'Дальше →' : '🏁 Итог';
+}
+
+function qzFinish() {
+  const total = qzQueue.length, score = Math.round(qzRight / total * QZ_ROUND);
+  const stars = qzRight === total ? '⭐⭐⭐' : qzRight >= total * 0.7 ? '⭐⭐' : qzRight >= total * 0.4 ? '⭐' : '🙂';
+  const key = qzModeKey();
+  const record = qzBest[key] == null || score > qzBest[key];
+  if (record) { qzBest[key] = score; localStorage.setItem('quizBest', JSON.stringify(qzBest)); }
+  qzEl('qzStars').textContent = stars;
+  qzEl('qzResult').innerHTML = `Правильно ${qzRight} из ${total}` + (record ? '<br>🏆 Новый рекорд!' : '');
+  sfx('win');
+  say(`Правильно ${qzRight} из ${total}`);
+  qzScreen('qzEnd');
+}
+
+qzEl('qzStart').onclick = qzStart;
+qzEl('qzAgain').onclick = qzStart;
+qzEl('qzBack').onclick = () => { qzScreen('qzSetup'); qzShowBest(); };
+qzEl('qzExit').onclick = () => { qzScreen('qzSetup'); qzShowBest(); };
+qzEl('qzNext').onclick = () => { qzIdx++; qzIdx < qzQueue.length ? qzAskNext() : qzFinish(); };
+qzEl('qzInfo').onclick = async () => { await qzLoad(); qzEl('qzSources').hidden = !qzEl('qzSources').hidden; };
+qzShowBest();
+
 // ===== Идеи (сохраняются в памяти телефона) =====
 const ideaList = document.getElementById('ideaList');
 let ideas = JSON.parse(localStorage.getItem('ideas') || '[]');
@@ -1725,7 +1852,7 @@ function generatedStep(t, step) {
   return { mel, bass };
 }
 
-const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null, studio: 'calm', products: 'calm', numbers: 'calm', sounds: null, cups: 'play' };
+const MUSIC_FOR = { dots: 'play', shapes: 'play', puzzles: 'calm', ideas: 'calm', draw: 'calm', lab: 'calm', colors: 'endless', moroz: null, studio: 'calm', products: 'calm', numbers: 'calm', sounds: null, cups: 'play', quiz: 'calm' };
 const MUSIC_VOLUME = 0.1;
 
 let musicOn = localStorage.getItem('musicOn') !== '0';

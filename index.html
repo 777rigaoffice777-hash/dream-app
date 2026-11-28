@@ -7,11 +7,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Мастерская</title>
-  <meta name="app-version" content="55">
+  <meta name="app-version" content="56">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=55">
+  <link rel="stylesheet" href="style.css?v=56">
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
   </script>
@@ -319,6 +319,44 @@
       <button id="cpStart" class="big">▶ Старт</button>
     </section>
 
+    <!-- Викторина «Страны»: флаги, гербы, очертания — современные и исторические -->
+    <section id="quiz" class="screen">
+      <div id="qzSetup">
+        <h2>🌍 Викторина «Страны»</h2>
+        <div class="qzLabel">Какие страны?</div>
+        <div class="qzChoice" id="qzKind">
+          <button data-v="modern" class="sel">🌍 Современные</button>
+          <button data-v="historical">🏰 Исторические</button>
+          <button data-v="all">🔀 Все</button>
+        </div>
+        <div class="qzLabel">Что угадываем?</div>
+        <div class="qzChoice" id="qzType">
+          <button data-v="flag" class="sel">🏳️ Флаг</button>
+          <button data-v="arms">🛡 Герб</button>
+          <button data-v="outline">🗺 Очертания</button>
+          <button data-v="mix">🎲 Всё</button>
+        </div>
+        <div class="qzBest" id="qzBest"></div>
+        <button id="qzStart" class="big">▶ Начать</button>
+        <button id="qzInfo" class="qzInfoBtn">ℹ️ Откуда картинки</button>
+        <div id="qzSources" hidden></div>
+      </div>
+      <div id="qzGame" hidden>
+        <div class="qzTop"><span id="qzProgress"></span><span id="qzScore"></span><button id="qzExit" title="Выйти">✕</button></div>
+        <div class="qzAsk" id="qzAsk"></div>
+        <div class="qzPic" id="qzPic"></div>
+        <div class="qzAnswers" id="qzAnswers"></div>
+        <div class="qzFact" id="qzFact"></div>
+        <button id="qzNext" hidden>Дальше →</button>
+      </div>
+      <div id="qzEnd" hidden>
+        <div class="qzStars" id="qzStars"></div>
+        <div class="qzResult" id="qzResult"></div>
+        <button id="qzAgain" class="big">↺ Ещё раз</button>
+        <button id="qzBack">⚙️ Другой режим</button>
+      </div>
+    </section>
+
     <!-- Экран: Идеи -->
     <section id="ideas" class="screen">
       <h2>Мои идеи</h2>
@@ -396,12 +434,13 @@
     <button data-screen="numbers">🎲<span>Числа</span></button>
     <button data-screen="sounds">🔊<span>Звуки</span></button>
     <button data-screen="cups">🥤<span>Стаканы</span></button>
+    <button data-screen="quiz">🌍<span>Страны</span></button>
     <button data-screen="ideas">💡<span>Идеи</span></button>
     <button data-screen="draw">🎨<span>Рисовать</span></button>
     <button data-screen="lab">🧪<span>Лаба</span></button>
   </nav>
 
-  <script src="app.js?v=55"></script>
+  <script src="app.js?v=56"></script>
   <script>
     // Страховка: если основной код не запустился (в нём ошибка), каждые 30 секунд проверяем,
     // не выложена ли исправленная версия, и перезагружаемся на неё. Работает отдельно от app.js.
@@ -413,6 +452,6 @@
       }).catch(function () {});
     }, 30000);
   </script>
-  <script type="module" src="studio.js?v=55"></script>
+  <script type="module" src="studio.js?v=56"></script>
 </body>
 </html>
